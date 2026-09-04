@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Optimus — CorelDRAW add-in that OPTIMIZES .cdr files (node reduction + cleanup).
+    Same architecture as SisCut's add-in, but deliberately leaner: no license, no Rust
+    engine, no SQLite, no external service. The docker is a WPF UserControl the CorelDRAW
+    addon framework hosts (type="wpfhost"); it embeds a WebView2 that renders the operator UI.
+
+    net48 is the framework the CorelDRAW addon host loads. RF: works across CorelDRAW
+    2024/25/26 by LATE-BINDING the Application (dynamic) — one assembly, every version.
+
+    No ILRepack: every managed dep ships loose next to Optimus.AddIn.dll in the addon
+    folder, and OptimusDocker's AssemblyResolve loads each sibling from that folder (the
+    CorelDRAW host does NOT add the addon folder to the probe path).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Optimus.AddIn</RootNamespace>
+    <AssemblyName>Optimus.AddIn</AssemblyName>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <!-- Cross-platform net48 reference assemblies so the source compiles anywhere. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <!-- WebView2 hosts the operator UI (Ui/OptimusDocker.cs) in-process inside CorelDRAW. -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+  <!-- Layers: Core is pure (testable on net8.0), Interop owns every CorelDRAW COM call. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Optimus.Core\Optimus.Core.csproj" />
+    <ProjectReference Include="..\Optimus.Interop\Optimus.Interop.csproj" />
+    <ProjectReference Include="..\Optimus.Windows\Optimus.Windows.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.VisualBasic" />
+    <!-- WPF: the docker control is a System.Windows.Controls.UserControl (the addon
+         framework hosts only WPF, type="wpfhost"). Built in code, no XAML. -->
+    <Reference Include="PresentationFramework" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+  </ItemGroup>
+
+  <!-- Operator UI (single self-contained HTML file, CSS inline, fully offline). -->
+  <!-- Embedded in the DLL; OptimusBridge extracts it to %TEMP%\Optimus_ui\ and serves it -->
+  <!-- through a WebView2 virtual host. -->
+  <ItemGroup>
+    <EmbeddedResource Include="wwwroot/index.html">
+      <LogicalName>ui.index.html</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

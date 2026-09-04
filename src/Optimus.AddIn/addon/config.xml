@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Optimus Add-on - config.xml (button ICON / STRING map)
+
+  Ties our command GUID to the numeric resources embedded in Optimus.Resources.dll so the
+  toolbar/menu button renders the orange Optimus mark instead of a blank slot:
+
+    AppUI.xslt  : <itemData guid="b1665682-..." icon="guid://b1665682-..." .../>
+    config.xml  : <resEntry id="b1665682-..." string="101" icon="101"/>  (this file)
+    resource DLL: Optimus.Resources.dll carries RT_GROUP_ICON 101 (16/24/32/48 px) + RT_STRING 101
+
+  path is relative to this addon folder (<Corel>\Programs64\Addons\Optimus\), where the
+  installer also drops Optimus.Resources.dll.
+-->
+<config>
+  <resources>
+    <resource name="Optimus" path="Optimus.Resources.dll">
+      <resourceMap>
+        <resEntry id="b1665682-2d27-445a-96d0-45af18a2504c" string="101" icon="101"/>
+      </resourceMap>
+    </resource>
+  </resources>
+</config>
