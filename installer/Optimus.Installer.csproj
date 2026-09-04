@@ -1,0 +1,171 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Optimus installer — WinForms host for a WebView2 wizard UI. Copies the add-on payload
+    into every CorelDRAW's Programs64\Addons\Optimus\, and (optionally) runs a safe Windows
+    cleanup. No license, no HWID, no external service.
+
+    NO ILRepack: the managed deps (WebView2 + System.Text.Json) ship loose next to the EXE.
+    Distribute the whole publish/build folder (or a zip of it). WebView2Loader.dll (native) is
+    embedded and extracted at startup so the loose-folder layout still finds it.
+
+    Build order: build Optimus.AddIn + Optimus.Resources, then scripts/build-all.ps1 assembles
+    ../dist/payload/, THEN build this project (it embeds ../dist/payload/*.dll).
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Optimus.Installer</RootNamespace>
+    <AssemblyName>Optimus_Setup</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>../src/Optimus.Resources/icons/optimus.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <!-- ILRepack: merge all managed deps into a single EXE on Release (dev-only, not deployed). -->
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.34.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+  </ItemGroup>
+
+  <!-- Installer UI (single self-contained HTML file; extracted to %TEMP% at startup). -->
+  <ItemGroup>
+    <EmbeddedResource Include="wwwroot/index.html">
+      <LogicalName>ui.index.html</LogicalName>
+    </EmbeddedResource>
+    <!-- Orange mark embedded so the borderless Form can set it as the window/taskbar icon. -->
+    <EmbeddedResource Include="../src/Optimus.Resources/icons/optimus.ico">
+      <LogicalName>app.icon.ico</LogicalName>
+    </EmbeddedResource>
+    <!-- Native WebView2 loader (extracted at startup via SetDllDirectory). -->
+    <EmbeddedResource Include="../dist/payload/WebView2Loader.dll">
+      <LogicalName>WebView2Loader.dll</LogicalName>
+    </EmbeddedResource>
+    <!-- Excluded from ILRepack (IAsyncDisposable type-forwarded by net48); loaded via
+         Program.OnAssemblyResolve from this embedded copy. -->
+    <EmbeddedResource Include="../dist/payload/Microsoft.Bcl.AsyncInterfaces.dll">
+      <LogicalName>Microsoft.Bcl.AsyncInterfaces.dll</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- ── Addon payload → <Corel>\Programs64\Addons\Optimus\ ──────────────────── -->
+  <!-- Every DLL in the assembled payload (Optimus.AddIn.dll + Optimus.Resources.dll + all -->
+  <!-- loose deps + WebView2Loader.dll), plus the addon manifest (marker + config + XSLT). -->
+  <ItemGroup>
+    <_AddonPayload Include="../dist/payload/*.dll" />
+    <EmbeddedResource Include="@(_AddonPayload)">
+      <LogicalName>addon.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <!-- Voice command (F11): the offline whisper.cpp model. ~57 MB, so it is what makes this
+         installer noticeably bigger than earlier versions — a deliberate trade for zero network
+         dependency at demo time (Davi rejected the cloud-API alternative, 2026-08-14). -->
+    <EmbeddedResource Include="../assets/voice/ggml-model.bin">
+      <LogicalName>addon.ggml-model.bin</LogicalName>
+    </EmbeddedResource>
+    <!-- Whisper.net's OWN native-library loader — not our code — insists on finding whisper.dll and
+         its ggml companions under "runtimes/win-x64/" relative to wherever Whisper.net.dll itself was
+         loaded from (our addon folder); a flat copy is invisible to it ("Native Library not found in
+         default paths", measured on Davi's machine, 2026-08-14/15 — reproduced and fixed locally by
+         simulating the exact host/plugin split before shipping this). NO extra "native" segment: that
+         was an earlier, wrong guess based on the generic .NET native-asset convention, which does not
+         apply to this loader. The LogicalName encodes the subfolder with '/', and
+         InstallerEngine.ExtractOne recreates it on disk. -->
+    <_WhisperNative Include="../dist/payload/runtimes/win-x64/*.dll" />
+    <EmbeddedResource Include="@(_WhisperNative)">
+      <LogicalName>addon.runtimes/win-x64/%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <!-- Voice command CONFIRMATION AUDIO: fixed WAV clips, one per command, rendered once with Piper
+         (see THIRD-PARTY-NOTICES.txt — the OUTPUT is bundled, never piper.exe/espeak-ng.dll
+         themselves, so the GPL-3.0 covering espeak-ng's own code never attaches to this product).
+         Replaces window.speechSynthesis, which Davi rejected for varying by machine (2026-08-15). -->
+    <_VoiceSounds Include="../dist/payload/voice-sounds/pt-BR/*.wav" />
+    <EmbeddedResource Include="@(_VoiceSounds)">
+      <LogicalName>addon.voice-sounds/pt-BR/%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="../src/Optimus.AddIn/addon/Coreldrw.addon">
+      <LogicalName>addon.Coreldrw.addon</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="../src/Optimus.AddIn/addon/config.xml">
+      <LogicalName>addon.config.xml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="../src/Optimus.AddIn/addon/AppUI.xslt">
+      <LogicalName>addon.AppUI.xslt</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="../src/Optimus.AddIn/addon/UserUI.xslt">
+      <LogicalName>addon.UserUI.xslt</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- Licence attribution travels WITH the binaries, not only in the repo. -->
+  <ItemGroup>
+    <EmbeddedResource Include="../THIRD-PARTY-NOTICES.txt">
+      <LogicalName>notices.THIRD-PARTY-NOTICES.txt</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- ── Maintenance app payload → %ProgramFiles%\Optimus\Manutencao\ ─────────── -->
+  <!-- Module 1 (the standalone Windows maintenance app) is a SECOND destination, so it travels as -->
+  <!-- its own "app.payload.*" resource set. Assembled by scripts/build-all.ps1 into -->
+  <!-- dist/payload-app/; if the folder is absent the installer simply skips the module. -->
+  <ItemGroup>
+    <_AppPayload Include="../dist/payload-app/*.dll" />
+    <_AppPayload Include="../dist/payload-app/*.exe" />
+    <_AppPayload Include="../dist/payload-app/*.config" />
+    <EmbeddedResource Include="@(_AppPayload)">
+      <LogicalName>app.payload.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!--
+    ILRepack: on Release, merge all managed deps into packed/Optimus_Setup.exe so the whole
+    distribution is a SINGLE file. WebView2Loader.dll is a native PE (can't be repacked) — it
+    travels embedded and is extracted at startup. Microsoft.Bcl.AsyncInterfaces is left out
+    (net48 type-forwards IAsyncDisposable) and loaded from its embedded copy via AssemblyResolve.
+    Microsoft.Web.WebView2.Wpf is not referenced by the installer, so it is not merged.
+
+    NOTE: with System.Text.Json merged and Bcl.AsyncInterfaces external, JsonSerializer.Serialize
+    would throw TypeLoadException — but the installer only ever PARSES JSON (JsonDocument.Parse)
+    and hand-rolls its outgoing messages, so this is safe.
+  -->
+  <Target Name="ILRepackMerge" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <PropertyGroup>
+      <_PackedDir>$(OutputPath)packed\</_PackedDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(_PackedDir)" />
+    <!-- The x64 WebView2Loader.dll (native PE) lands in the output root here; ILRepack chokes on
+         it. It is already embedded from dist/payload + extracted at runtime, so drop it from the
+         merge search path. -->
+    <Delete Files="$(OutputPath)WebView2Loader.dll" />
+    <ItemGroup>
+      <_RepackInput Include="$(OutputPath)Optimus_Setup.exe" />
+      <_RepackInput Include="$(OutputPath)Microsoft.Web.WebView2.Core.dll" />
+      <_RepackInput Include="$(OutputPath)Microsoft.Web.WebView2.WinForms.dll" />
+      <_RepackInput Include="$(OutputPath)System.Text.Json.dll" />
+      <_RepackInput Include="$(OutputPath)System.Buffers.dll" />
+      <_RepackInput Include="$(OutputPath)System.Memory.dll" />
+      <_RepackInput Include="$(OutputPath)System.Numerics.Vectors.dll" />
+      <_RepackInput Include="$(OutputPath)System.Runtime.CompilerServices.Unsafe.dll" />
+      <_RepackInput Include="$(OutputPath)System.Text.Encodings.Web.dll" />
+      <_RepackInput Include="$(OutputPath)System.Threading.Tasks.Extensions.dll" />
+      <_RepackInput Include="$(OutputPath)System.ValueTuple.dll" />
+    </ItemGroup>
+    <ILRepack
+      Internalize="false"
+      InputAssemblies="@(_RepackInput)"
+      OutputFile="$(_PackedDir)Optimus_Setup.exe"
+      TargetKind="WinExe"
+      LibraryPath="$(OutputPath)"
+      XmlDocumentation="false"
+      DebugInfo="false" />
+    <Message Text="ILRepack: packed\Optimus_Setup.exe ready — single-EXE (WebView2Loader + Bcl.AsyncInterfaces embedded)" Importance="high" />
+  </Target>
+
+</Project>
