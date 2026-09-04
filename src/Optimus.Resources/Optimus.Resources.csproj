@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Optimus addon ICON/STRING resources — the toolbar button mark (orange bolt tile).
+
+    RESOURCE-ONLY DLL: no code. It carries a Win32 RT_GROUP_ICON + RT_ICON (16/24/32/48 px)
+    and an RT_STRING ("Optimus"), embedded from optimus.res. CorelDRAW's addon framework loads
+    it by the name declared in addon/config.xml (path="Optimus.Resources.dll"), mapping our
+    command GUID to icon id 101 so the button shows the mark instead of a blank slot.
+
+    optimus.res is a hand-built Win32 .res (icons/gen_icons.ps1 draws the mark → build_res.ps1
+    packs the .res). Regenerate both if the mark changes, then rebuild.
+
+    net48 so it deploys next to Optimus.AddIn.dll under <Corel>\Programs64\Addons\Optimus\.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>Optimus.Resources</AssemblyName>
+    <RootNamespace>Optimus.Resources</RootNamespace>
+    <Win32Resource>optimus.res</Win32Resource>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- The SDK auto-includes AssemblyMarker.cs (one trivial type) so it emits an assembly. -->
+
+</Project>
