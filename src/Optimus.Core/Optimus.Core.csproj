@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Optimus.Core — PURE logic. No COM, no WinForms/WPF, no Win32.
+
+    netstandard2.0 so it is consumable by the net48 add-in AND testable from net8.0 on any
+    machine without CorelDRAW installed. Everything that can be decided without touching
+    CorelDRAW lives here: geometry, cleanup rules, diagnostics, glyph coverage, maintenance
+    rules, measurement. This split is what makes TDD possible (the v1.0 had none).
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Optimus.Core</RootNamespace>
+    <AssemblyName>Optimus.Core</AssemblyName>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- The test project asserts on internal helpers (glob matching, pointer decoding) directly. -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Optimus.Core.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <!-- netstandard2.0 has no built-in System.Text.Json; the palette/font registries persist JSON. -->
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+</Project>
