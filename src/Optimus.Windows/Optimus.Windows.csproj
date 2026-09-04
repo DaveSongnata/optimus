@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Optimus.Windows — Windows-only I/O that is NOT CorelDRAW: font files, WMI, Win32.
+
+    Separate from Optimus.Interop so the CorelDRAW COM layer stays focused, and separate from
+    Optimus.Core so Core remains pure and testable on any platform.
+
+    net48 because it uses WPF's font stack (PresentationCore) to read a font's cmap — the
+    dependency-free, licence-free way to answer "does this font have ç?".
+  -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Optimus.Windows</RootNamespace>
+    <AssemblyName>Optimus.Windows</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <!-- Voice command (F11): fully offline speech-to-text. whisper.cpp via Whisper.net, CPU-only
+         runtime (no CUDA/GPU assumption on a demo laptop), mic capture via NAudio. No cloud API, no
+         key, no network at runtime — replaces an earlier OpenAI-Whisper design Davi explicitly
+         rejected (2026-08-14): "eu quero que funcione offline... não é para usar API". -->
+    <PackageReference Include="Whisper.net" Version="1.7.4" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.7.4" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- GlyphTypeface.CharacterToGlyphMap IS the font's cmap table: no third-party font parser,
+         no licence question (SixLabors.Fonts 2.x is net6+ and split-licensed; SharpFont drags in
+         FreeType's FTL/GPL). -->
+    <Reference Include="PresentationCore" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Management" />
+    <!-- Maintenance module: ServiceController (spooler/wuauserv must be stopped to clean their
+         folders) and the shell interop for the Recycle Bin. -->
+    <Reference Include="System.ServiceProcess" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Optimus.Core\Optimus.Core.csproj" />
+  </ItemGroup>
+
+</Project>
