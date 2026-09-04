@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Proposta — Optimus | Aisten Lab</title>
+<style>
+@page { size: A4; margin: 0; }
+:root{
+  --ink:#1C1917; --brand:#EA580C; --brand-strong:#C2410C; --brand-soft:#FFF1E9;
+  --paper:#FFFFFF; --line:#ECE5DD; --line-2:#F5F0EA; --ink-45:#7A7268; --ink-30:#ABA398; --field:#FCFBF9;
+  --font:'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif;
+  --mono:ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);color:var(--ink);background:var(--paper);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:210mm;min-height:297mm;padding:0;margin:0 auto;position:relative;display:flex;flex-direction:column}
+
+/* header */
+.head{background:var(--ink);color:#fff;padding:26px 32px 22px;position:relative;overflow:hidden}
+.head::before{content:"";position:absolute;inset:0;opacity:.14;background:radial-gradient(240px 150px at 90% -20%, var(--brand) 0, transparent 70%)}
+.head-row{display:flex;align-items:center;gap:14px;position:relative;z-index:1}
+.mark{width:46px;height:46px;flex:0 0 46px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--brand-strong));
+  display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(194,65,12,.5)}
+.mark svg{width:26px;height:26px}
+.co{font-weight:800;font-size:19px;letter-spacing:-.01em}
+.co small{display:block;font-weight:600;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-top:3px}
+.doc{margin-left:auto;text-align:right;position:relative;z-index:1}
+.doc .t{font-weight:700;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brand)}
+.doc .d{font-family:var(--mono);font-size:10.5px;color:rgba(255,255,255,.5);margin-top:3px}
+
+/* body */
+.content{padding:26px 32px 20px;flex:1}
+.proj{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.proj h1{font-weight:800;font-size:24px;letter-spacing:-.02em}
+.proj .tag{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);background:var(--brand-soft);padding:4px 10px;border-radius:999px}
+.desc{font-size:12.5px;color:var(--ink-45);line-height:1.55;margin-top:9px;max-width:640px}
+
+.tick{display:flex;align-items:center;gap:8px;margin:22px 0 10px}
+.tick .pt{width:16px;height:1px;background:var(--brand);position:relative}
+.tick .pt::before{content:"";position:absolute;left:0;top:-2px;width:1px;height:5px;background:var(--brand)}
+.tick .c{font-weight:700;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--brand)}
+.tick::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line) 0,transparent 100%)}
+
+table{width:100%;border-collapse:collapse;margin-top:6px}
+thead th{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-30);text-align:left;padding:0 0 8px}
+thead th.r{text-align:right}
+.mod td{background:var(--field);font-weight:700;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-strong);padding:7px 12px;border-top:1px solid var(--line)}
+tbody td{padding:9px 12px;font-size:12.5px;border-top:1px solid var(--line-2);vertical-align:top}
+tbody td.n{font-family:var(--mono);color:var(--ink-30);font-size:11px;width:26px;padding-left:6px}
+tbody td.v{text-align:right;font-family:var(--mono);font-weight:700;white-space:nowrap;width:92px}
+tbody tr td .sub{display:block;font-size:10.5px;color:var(--ink-45);margin-top:2px;font-weight:400}
+.cortesia{color:var(--brand);font-weight:700;font-size:11px}
+
+.total-row td{border-top:2px solid var(--ink);padding:13px 12px;font-weight:800;font-size:15px}
+.total-row td.v{font-family:var(--mono);font-size:20px;color:var(--brand-strong);text-align:right}
+
+.subtotals{display:flex;gap:10px;margin-top:16px}
+.sub-c{flex:1;border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:var(--paper)}
+.sub-c .k{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-30)}
+.sub-c .val{font-family:var(--mono);font-size:14px;font-weight:800;color:var(--ink);margin-top:4px}
+
+.cols{display:flex;gap:22px;margin-top:22px}
+.cols .col{flex:1}
+.cols h3{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--brand);margin-bottom:8px}
+.cols p{font-size:11.5px;color:var(--ink-45);line-height:1.55;margin-bottom:6px}
+.cols b{color:var(--ink)}
+.pill{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink);background:var(--brand-soft);border:1px solid #F6D8C4;border-radius:7px;padding:3px 8px}
+
+/* footer */
+.footbar{height:8px;background:linear-gradient(90deg,var(--brand),var(--brand-strong))}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="head">
+    <div class="head-row">
+      <span class="mark"><svg viewBox="0 0 24 24"><path fill="#fff" d="M13.8 2 L7.2 13 h4.1 l-1.3 9 8-13 h-4.6 L15.6 2 z"/></svg></span>
+      <div class="co">Aisten Lab Technology<small>Software sob medida</small></div>
+      <div class="doc">
+        <div class="t">Proposta Comercial</div>
+        <div class="d">16/07/2026</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="proj">
+      <h1>Optimus</h1>
+      <span class="tag">Otimização &amp; Manutenção · CorelDRAW</span>
+    </div>
+    <p class="desc">Extensão instalada dentro do CorelDRAW que reduz o peso dos arquivos <b>.cdr</b> (redução de nós das curvas com precisão controlada), faz manutenção de rotina do computador e verifica cores, fontes e acentuação — tudo com um clique, via instalador próprio.</p>
+
+    <div class="tick"><span class="pt"></span><span class="c">Escopo por funcionalidade</span></div>
+
+    <table>
+      <thead><tr><th></th><th>Funcionalidade</th><th class="r">Valor</th></tr></thead>
+      <tbody>
+        <tr><td colspan="3" class="mod" style="background:var(--brand-soft)">Base</td></tr>
+        <tr><td class="n">—</td><td>Plugin C# — add-in CorelDRAW, host WebView2, ponte COM e <b>instalador 1 clique</b><span class="sub">Fundação sobre a qual todos os módulos rodam.</span></td><td class="v">R$ 1.100</td></tr>
+
+        <tr class="mod"><td colspan="3">Módulo 1 · Manutenção do PC</td></tr>
+        <tr><td class="n">1</td><td>Limpeza do Windows — temporários (usuário/sistema), prefetch e cache de DNS, com relatório de espaço liberado</td><td class="v">R$ 300</td></tr>
+        <tr><td class="n">2</td><td>Liberação de memória RAM (working set / standby list)</td><td class="v">R$ 250</td></tr>
+
+        <tr class="mod"><td colspan="3">Módulo 2 · Otimização de arquivos .cdr</td></tr>
+        <tr><td class="n">3</td><td>Redução de nós via API nativa do Corel — níveis Leve / Médio / Forte</td><td class="v">R$ 550</td></tr>
+        <tr><td class="n">4</td><td>Algoritmo próprio de simplificação de curvas (Douglas-Peucker / Visvalingam sobre Bézier)</td><td class="v">R$ 450</td></tr>
+        <tr><td class="n">5</td><td>Limpeza do documento + reserialização (fecha e reabre — evita o arquivo "engordar")</td><td class="v">R$ 250</td></tr>
+        <tr><td class="n">6</td><td>Painel de resultado — antes/depois, % de redução e peso do arquivo</td><td class="v">R$ 200</td></tr>
+
+        <tr class="mod"><td colspan="3">Módulo 3 · Cores, Fontes &amp; Acentos</td></tr>
+        <tr><td class="n">7</td><td>Reconhecimento de cores usadas no documento (CMYK / RGB / Pantone + hex)</td><td class="v">R$ 450</td></tr>
+        <tr><td class="n">8</td><td>Levantamento de fontes usadas no documento</td><td class="v">R$ 300</td></tr>
+        <tr><td class="n">9</td><td>Verificação de acento/glifos na fonte — checa a tabela cmap para PT-BR</td><td class="v">R$ 500</td></tr>
+
+        <tr><td class="n">✦</td><td>Multi-idioma na interface (PT / ES / EN)</td><td class="v cortesia">Cortesia</td></tr>
+
+        <tr class="total-row"><td></td><td>Total do pacote</td><td class="v">R$ 4.350</td></tr>
+      </tbody>
+    </table>
+
+    <div class="subtotals">
+      <div class="sub-c"><div class="k">Base</div><div class="val">R$ 1.100</div></div>
+      <div class="sub-c"><div class="k">Manutenção</div><div class="val">R$ 550</div></div>
+      <div class="sub-c"><div class="k">Otimização CDR</div><div class="val">R$ 1.450</div></div>
+      <div class="sub-c"><div class="k">Cores / Fontes</div><div class="val">R$ 1.250</div></div>
+    </div>
+
+    <div class="cols">
+      <div class="col">
+        <h3>Condições</h3>
+        <p><b>3 entregas independentes</b> — cada módulo é escopado, desenvolvido, entregue e validado de forma autônoma.</p>
+        <p><b>Pagamento por entrega:</b> cada módulo concluído e aprovado libera a parcela correspondente.</p>
+        <p>A retirada de qualquer item recalcula o total proporcionalmente, mantendo o valor unitário dos demais.</p>
+      </div>
+      <div class="col">
+        <h3>Prazo &amp; Opcionais</h3>
+        <p>Prazo de entrega: <span class="pill">5 dias úteis</span></p>
+        <p>Validade da proposta: <b>15 dias</b>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footbar"></div>
+
+</div>
+</body>
+</html>
