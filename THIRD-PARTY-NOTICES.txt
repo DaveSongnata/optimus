@@ -1,0 +1,199 @@
+OPTIMUS — AVISOS DE TERCEIROS / THIRD-PARTY NOTICES
+====================================================
+
+Este documento lista todo componente de terceiro efetivamente distribuído com o Optimus
+(plugin do CorelDRAW + aplicativo Optimus Manutenção + instalador), com a respectiva licença.
+
+Política do produto: somente licenças permissivas (MIT, Apache-2.0, BSD, zlib, domínio
+público) são embarcadas neste software comercial de código fechado.
+
+
+--------------------------------------------------------------------------------
+1. Microsoft Edge WebView2 (managed + native loader)
+--------------------------------------------------------------------------------
+Arquivos:  Microsoft.Web.WebView2.Core.dll
+           Microsoft.Web.WebView2.Wpf.dll
+           Microsoft.Web.WebView2.WinForms.dll
+           WebView2Loader.dll  (nativo, x64)
+Versão:    1.0.2792.45
+Origem:    pacote NuGet Microsoft.Web.WebView2
+Licença:   Microsoft Software License Terms — Microsoft Edge WebView2 SDK
+           https://aka.ms/webview2-license
+
+Uso no Optimus: renderiza a interface do operador (painel dentro do CorelDRAW e janela do
+aplicativo de manutenção). O tempo de execução do WebView2 (Evergreen Runtime) NÃO é
+redistribuído: o Optimus usa o que já está instalado no Windows e, quando ausente, orienta o
+operador a instalá-lo pela Microsoft.
+
+
+--------------------------------------------------------------------------------
+2. Bibliotecas .NET da Microsoft (pacotes NuGet)
+--------------------------------------------------------------------------------
+Arquivos:  System.Text.Json.dll                       (8.0.5)
+           System.Text.Encodings.Web.dll
+           System.Buffers.dll
+           System.Memory.dll
+           System.Numerics.Vectors.dll
+           System.Runtime.CompilerServices.Unsafe.dll
+           System.Threading.Tasks.Extensions.dll
+           System.ValueTuple.dll
+           Microsoft.Bcl.AsyncInterfaces.dll
+Origem:    dotnet/runtime
+Licença:   MIT
+           https://github.com/dotnet/runtime/blob/main/LICENSE.TXT
+
+    Copyright (c) .NET Foundation and Contributors
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of this
+    software and associated documentation files (the "Software"), to deal in the Software
+    without restriction, including without limitation the rights to use, copy, modify, merge,
+    publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
+    to whom the Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all copies or
+    substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+    INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+    PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+    FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+    OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+
+Uso no Optimus: serialização JSON na ponte entre a interface (JavaScript) e o C#.
+
+
+--------------------------------------------------------------------------------
+3. ILRepack.Lib.MSBuild.Task
+--------------------------------------------------------------------------------
+Licença:   Apache-2.0  (https://github.com/ravibpatel/ILRepack.Lib.MSBuild.Task)
+Base:      ILRepack (Apache-2.0), por sua vez derivado de ILMerge
+
+Uso no Optimus: ferramenta de BUILD apenas — mescla as dependências gerenciadas do instalador
+em um único EXE. Nenhum arquivo desta ferramenta é distribuído ao cliente.
+
+
+--------------------------------------------------------------------------------
+4. Microsoft.NETFramework.ReferenceAssemblies
+--------------------------------------------------------------------------------
+Licença:   MIT (assemblies de referência para compilar contra .NET Framework 4.8)
+Uso:       apenas em tempo de compilação; não é distribuído.
+
+
+--------------------------------------------------------------------------------
+5. xUnit.net
+--------------------------------------------------------------------------------
+Licença:   Apache-2.0 (https://github.com/xunit/xunit)
+Uso:       apenas nos testes automatizados; não é distribuído.
+
+
+--------------------------------------------------------------------------------
+6. Whisper.net / Whisper.net.Runtime (whisper.cpp)
+--------------------------------------------------------------------------------
+Arquivos:  Whisper.net.dll, whisper.dll, ggml-whisper.dll, ggml-base-whisper.dll,
+           ggml-cpu-whisper.dll  (nativos, x64)
+Origem:    pacotes NuGet Whisper.net / Whisper.net.Runtime (wrapper de whisper.cpp,
+           https://github.com/ggerganov/whisper.cpp)
+Licença:   MIT
+Uso no Optimus: comando de voz (reconhecimento de fala) — roda inteiramente no computador
+do operador, sem chamada de rede e sem chave de API. Substituiu um design anterior que
+dependia da API em nuvem da OpenAI, rejeitado por decisão do cliente (Davi, 2026-08-14): o
+produto tem que funcionar offline, sem conta e sem custo por uso.
+
+
+--------------------------------------------------------------------------------
+7. NAudio
+--------------------------------------------------------------------------------
+Origem:    pacote NuGet NAudio (https://github.com/naudio/NAudio)
+Licença:   MIT
+Uso no Optimus: captura de áudio do microfone para o comando de voz.
+
+
+--------------------------------------------------------------------------------
+8. Modelo de voz (ggml-model.bin — Whisper "base", quantizado q5_1)
+--------------------------------------------------------------------------------
+Arquivo:   ggml-model.bin (~57 MB)
+Origem:    pesos do modelo Whisper da OpenAI, convertidos para o formato GGML pelo projeto
+           whisper.cpp (https://github.com/ggerganov/whisper.cpp), baixados de
+           https://huggingface.co/ggerganov/whisper.cpp
+Licença:   MIT (mesma licença dos pesos originais do Whisper, OpenAI)
+Uso no Optimus: reconhecimento de fala multilíngue (pt/es/en) do comando de voz, executado
+localmente — nunca enviado a servidor algum.
+
+
+--------------------------------------------------------------------------------
+9. Áudios de confirmação de voz (voice-sounds/pt-BR/*.wav)
+--------------------------------------------------------------------------------
+Arquivos:  analyze.wav, audit.wav, optimize.wav, lang_pt.wav, lang_es.wav, lang_en.wav,
+           unknown.wav, ready.wav (poucos KB cada — frases fixas e curtas)
+Origem:    renderizados UMA VEZ, em tempo de build, com o Piper (MIT,
+           https://github.com/rhasspy/piper), voz pt_BR-faber-medium
+           (https://huggingface.co/rhasspy/piper-voices).
+Licença do processo de geração: o Piper é MIT, mas seu fonemizador embute o eSpeak NG, que é
+GPL-3.0. Essa licença cobre o PRÓPRIO FERRAMENTAL, não a saída que ele produz — o mesmo
+princípio que permite exportar um PNG do GIMP (GPL) sem o PNG herdar GPL. Por isso: nada de
+piper.exe, espeak-ng.dll ou o modelo .onnx é distribuído aqui — só o áudio final, já pronto.
+Uso no Optimus: confirmação falada do comando de voz, tocada pelo host (VoicePlayer.cs) via
+System.Media.SoundPlayer — substituiu window.speechSynthesis, cuja qualidade variava conforme
+as vozes instaladas em cada máquina Windows (Davi, 2026-08-15: quer o mesmo resultado sempre,
+sem depender do que está instalado no computador do cliente).
+
+
+================================================================================
+COMPONENTES DELIBERADAMENTE NÃO EMBARCADOS
+================================================================================
+
+As alternativas abaixo resolveriam parte do problema, mas foram REJEITADAS por licença. O
+registro fica aqui porque a decisão é permanente e a tentação de reintroduzi-las é real.
+
+- Piper TTS em tempo de execução (piper.exe + espeak-ng.dll) — o eSpeak NG que o fonemizador do
+  Piper embute é GPL-3.0. Rodar essas DLLs DENTRO do Optimus (não apenas usá-las uma vez, no
+  build, pra gerar áudio) obrigaria o produto inteiro sob a GPL. Por isso só o ÁUDIO já
+  renderizado é distribuído (item 9 acima), nunca o motor.
+- BleachBit — GPLv3. Incompatível com software comercial de código fechado.
+- Sysinternals (Autoruns, RAMMap, Contig etc.) — o EULA proíbe a redistribuição, mesmo
+  gratuita. Em vez disso, o Optimus lê as mesmas fontes (registro, WMI, Agendador de Tarefas)
+  com código próprio.
+- Winapp2.ini — CC BY-SA 4.0. Seria redistribuível na íntegra com atribuição, mas qualquer
+  adaptação tornaria o NOSSO arquivo de regras ShareAlike. Decisão: escrever as regras do zero
+  (localização de arquivo é fato, não obra protegida).
+- Tabelas de cores Pantone — há histórico documentado de aplicação de DMCA. O Optimus não
+  embarca tabela alguma: quando existe cor spot, ele apenas ECOA o nome que já está no arquivo
+  do próprio cliente (Color.SpotColorName / Palette.MatchColor).
+- SixLabors.Fonts / SharpFont (leitura de fontes) — a primeira exige .NET 6+ e tem licença
+  dividida; a segunda arrasta o FreeType (FTL/GPL). O Optimus usa o GlyphTypeface do WPF, que
+  já vem no Windows: zero dependência, zero custo de licença.
+
+Facilidades do próprio Windows usadas em vez de dependências de terceiros: cleanmgr
+(VolumeCaches + /sagerun), DISM, sfc, defrag /O, WMI (MSFT_PhysicalDisk,
+MSFT_StorageReliabilityCounter, Win32_OperatingSystem, SystemRestore), ServiceController,
+SHEmptyRecycleBin/SHQueryRecycleBin (shell32), Agendador de Tarefas (Schedule.Service),
+WScript.Shell (criação de atalho) e o GlyphTypeface do WPF (leitura da tabela cmap das fontes).
+
+
+================================================================================
+O PRÓPRIO OPTIMUS
+================================================================================
+
+Optimus © Aisten Lab Technology. Todos os direitos reservados.
+Software proprietário. Este arquivo cobre apenas os componentes de terceiros acima.
+
+------------------------------------------------------------------------------
+vanilla-picker 2.12.3 — https://github.com/Sphinxxxx/vanilla-picker
+Copyright 2017-2018 Andreas Borgen, Adam Brooks
+
+Licenca ISC. Seletor de cor visual, embutido em Optimus.AddIn/wwwroot/index.html
+(variante .csp, que mantem o CSS separado do JS). Nao ha download em tempo de
+execucao: a pagina do docker funciona sem internet por regra do produto.
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
