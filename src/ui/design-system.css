@@ -1,0 +1,601 @@
+/*
+ * OPTIMUS — DESIGN SYSTEM
+ * =======================
+ *
+ * The single source for all three screens: the CorelDRAW docker, the maintenance app and the
+ * installer. `scripts/build-css.js` compiles this with Tailwind and injects the result into each
+ * screen's <style id="tw"> block.
+ *
+ * It exists because the three screens carried divergent copies. The maintenance app still opened on
+ * a gradient in the light orange — the colour the contrast audit failed (O20) — because the fix was
+ * made in the docker and the other screens never heard about it. A system kept in three copies is
+ * three systems, and they drift apart every time.
+ *
+ * HOW IT IS LAYERED
+ *   @layer base        tokens and element defaults
+ *   @layer components  the product's components, built with @apply from the theme scale
+ *   utilities          last, so markup can always win for a one-off
+ *
+ * The scale itself lives in `tailwind.config.js`, so `p-4`, `var(--s4)` and `theme(spacing.4)` are
+ * the same 16px by construction rather than by discipline.
+ *
+ * DO NOT edit the copy injected inside an index.html — the next build overwrites it. Edit here.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* ══ SCALE ═══════════════════════════════════════════════════════════════
+     The previous UI had 16 font sizes (11 of them between 8 and 13px, in half-pixel steps), 14
+     radii, 19 spacings and 21 shadows. That is what produces the machine-generated texture:
+     locally plausible, no system anywhere. Colour was tokenised; everything that creates visual
+     rhythm was loose.
+     Spacings are multiples of 4 — at 125% and 150% Windows scaling they land on whole pixels. */
+  :root {
+    --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+    --r-sm: 6px; --r-md: 10px; --r-pill: 999px;
+
+    /* 13px is the floor: below the critical size, reading speed falls off a cliff
+       (Legge & Bigelow 2011 — the curve is flat above it and collapses below).
+       11px is for short uppercase only, which tolerates a smaller size. */
+    --f-cap: 11px; --f-sm: 12px; --f-md: 13px; --f-lg: 15px; --f-hero: 30px;
+    --lh-tight: 1.3; --lh-body: 1.45;
+
+    /* ══ INK AND SURFACE ═══════════════════════════════════════════════════ */
+    /* Four text weights, and the last one is not text.
+       MEASURED, and the reason this changed: at #78716C (4.60:1) the secondary text sat close
+       enough to the disabled grey that the reviewer's question was "is this information or is this
+       switched off?" — and the answer must not depend on the reader's eyesight. #6B6560 is 5.51:1
+       and pulls it clear. */
+    --ink: #1C1917;      /* 16.8:1 — primary */
+    --ink-70: #57534E;   /*  7.3:1 — headings and labels */
+    --ink-45: #6B6560;   /*  5.5:1 — secondary text, the floor for anything readable */
+    --ink-30: #8C8C8C;   /*  3.2:1 — DECORATIVE ONLY: rules, disabled marks. Never a letter. */
+    --paper: #FBFAF8;
+    --card: #FFFFFF;
+    --field: #FCFBF9;
+
+    /* The bench: the surface the swatches sit on. ACHROMATIC on purpose — R=G=B, zero deviation.
+       MEASURED and corrected: this was #EFEAE4, an 11-point warm bias (R 239 / B 228). That was
+       wrong twice over. It biases the very judgement the surround exists to protect — ISO 3664 asks
+       for a NEUTRAL surround, and a warm beige is not neutral — and against the white card beside
+       it, it read as a colour mistake rather than as a deliberate inset.
+       #F2F2F2 keeps the #767676 swatch outline at 4.06:1 on it, so the outline still does its job. */
+    --bench: #F2F2F2;
+
+    /* Borders below 3:1 are invisible to many people and fail component contrast. The market's
+       "subtle" greys all fail: #E5E7EB is 1.19:1. */
+    --line: #E7E3DE;     /* decorative separator — carries no information */
+    --line-2: #F2EEE9;
+    --border: #767676;   /* 4.35:1 — outlines that MUST be seen */
+
+    /* ══ BRAND ═════════════════════════════════════════════════════════════
+       MEASURED: #EA580C on paper is 3.41:1, and white on #EA580C is 3.56:1. Both fail the 4.5:1
+       minimum for text — and the second one was the primary button's label, shipping. #C2410C with
+       white gives 5.18:1 and stays in the family. The lighter orange still exists, but it never
+       carries text on paper again. */
+    --brand: #C2410C;
+    --brand-bright: #EA580C;   /* fill and border only, never text on paper */
+    --brand-soft: #FFF1E9;
+    --brand-soft2: #FFE4D3;
+
+    /* ══ STATUS ════════════════════════════════════════════════════════════
+       MEASURED by deuteranopia simulation: error vs warning falls from ΔE 48.8 to 6.3 — practically
+       the same colour for about 1 in 12 men. And on light paper you cannot separate four hues by
+       lightness AND keep 4.5:1 (all four land between L* 37 and 41). Honest conclusion: COLOUR
+       CANNOT CARRY THE MEANING ALONE here. Every status also gets a shape and a word. */
+    --err: #B31212;      /* 6.7:1 */
+    --warn: #7A5200;     /* 6.6:1 */
+    --ok: #186A4B;       /* 6.3:1 */
+    --info: #2F5FB3;     /* 5.9:1 */
+    --err-soft: #FDECEC; --warn-soft: #FBF0DC; --ok-soft: #E8F4EE; --info-soft: #EAF0FB;
+
+    /* ══ MOTION ════════════════════════════════════════════════════════════
+       70–150ms is response ("I registered your click"); ~240ms is comprehension ("this came from
+       there"). Different jobs; the industry routinely collapses them into one number. */
+    --t-fast: 110ms; --t-med: 200ms;
+    --ease: cubic-bezier(.2, 0, .38, .9);
+    --sh-card: 0 1px 2px rgba(40, 20, 10, .06);
+    --sh-raised: 0 4px 14px -4px rgba(40, 20, 10, .22);
+
+    --font-sans: 'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif;
+    --font-mono: ui-monospace, 'Cascadia Mono', Consolas, 'Courier New', monospace;
+
+    /* Height of the bottom bar plus the footer under it. The floating mic clears this; at a smaller
+       offset it sat over the third tab and covered its label, and a button that blocks navigation
+       is worse than no button. A browser test asserts the two never overlap. */
+    --navbar-h: 92px;
+  }
+
+  /* Segoe UI Variable — the Windows 11 interface face — draws "1" about 30% narrower than the other
+     digits. Without this, any column of numbers SHAKES while the analysis updates. Costs nothing on
+     classic Segoe. */
+  * {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* Motion is switchable off. Windows already has that setting, and print-shop machines commonly
+     run with it off to make the system feel faster. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+    }
+  }
+
+  /* Visible focus. The previous UI set outline:0 and swapped a border colour, which disappears for
+     anyone navigating by keyboard. */
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+  }
+}
+
+@layer components {
+  /* ══════════════════════════════════════════════════════════════════════════
+     COMPONENTS
+     Written with @apply from the theme scale, so a component cannot invent a spacing or a size that
+     the system does not have. What stays as plain CSS inside them is what @apply has no vocabulary
+     for — and, deliberately, the rules that carry a measurement worth keeping next to the code.
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  /* ── shell ─────────────────────────────────────────────────────────────── */
+  .app {
+    @apply flex flex-col h-full;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+  }
+
+  /* The only thing that scrolls. min-height:0 is required: without it a flex child refuses to
+     shrink below its own content and the bottom bar is pushed off screen. */
+  .app-body {
+    @apply flex flex-col flex-1 gap-3 px-4 pt-4;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* ── surfaces ──────────────────────────────────────────────────────────── */
+  .card {
+    @apply rounded-md border border-line bg-card shadow-card overflow-hidden;
+  }
+
+  .card-head {
+    @apply flex items-center gap-2 px-3 py-2 border-b border-line-2;
+  }
+
+  .card-title {
+    @apply flex-1 text-cap font-extrabold uppercase text-ink-70;
+    letter-spacing: .1em;
+  }
+
+  .card-count {
+    @apply font-mono text-cap font-bold text-brand;
+  }
+
+  /* ── actions ───────────────────────────────────────────────────────────── */
+  /* Solid, never a gradient. A gradient behind a label means the WORST point of the gradient is the
+     real contrast, not the average — and the previous gradient ran into #EA580C, where white is
+     3.56:1 and fails. */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 min-h-tap px-4 rounded-sm
+           font-sans text-md font-bold cursor-pointer border-0;
+    transition: background var(--t-fast) var(--ease);
+  }
+
+  .btn-primary {
+    @apply btn bg-brand text-white;   /* white on #C2410C = 5.18:1 */
+  }
+
+  .btn-primary:hover { filter: brightness(1.08); }
+
+  .btn-quiet {
+    @apply btn bg-card text-ink-70 border border-border;
+  }
+
+  .btn-quiet:hover { @apply text-brand; border-color: var(--brand); }
+
+  .btn:disabled { @apply opacity-45; cursor: default; filter: none; }
+
+  /* The one button that destroys something the operator built. It is the only place in the product
+     that carries the error colour as a FILL — everywhere else red reports, here it acts. */
+  .btn-danger { @apply btn text-white; background: var(--err); }
+  .btn-danger:hover { filter: brightness(1.08); }
+
+  /* A card holding an open destructive question stops looking like the others. */
+  .pal-card.danger { @apply flex flex-col gap-2; border-color: var(--warn); background: var(--warn-soft); }
+
+  /* ── status ────────────────────────────────────────────────────────────── */
+  /* Shape first, colour second. Under deuteranopia the red and the amber are 6.3 ΔE apart — the
+     same colour, in practice — so the silhouette is what informs: triangle=warning, circle=error,
+     circle=ok, square=info. All four are distinguishable in greyscale. */
+  .status-ic {
+    @apply flex items-center justify-center text-white font-sans font-extrabold;
+    width: 16px; height: 16px; flex: 0 0 16px; font-size: 10px; line-height: 1;
+  }
+
+  .status-err  { @apply bg-err rounded-full; }
+  .status-ok   { @apply bg-ok rounded-full; }
+  .status-info { @apply bg-info; border-radius: 3px; }
+  .status-warn {
+    @apply bg-warn items-end;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    padding-bottom: 1px; font-size: 9px;
+  }
+
+  /* The explanation that used to open the modal. Still available, no longer the first thing read:
+     someone opening this for the tenth time is here to pick a palette, not to learn what one is. */
+  .modal-foot {
+    @apply px-4 pt-3 text-cap text-ink-45;
+    line-height: var(--lh-body);
+    border-top: 1px solid var(--line-2);
+    margin-top: var(--s3);
+  }
+
+  /* ── key / value ───────────────────────────────────────────────────────── */
+  /* Label left, value right, one row each. The previous grid put the label ON TOP of the value in
+     two columns, which reads in a zigzag and — worse — breaks the vertical column the numbers exist
+     to be compared in. Values are mono so digits line up between rows. */
+  .kv { @apply flex flex-col; }
+
+  .kv-r {
+    @apply flex items-baseline justify-between gap-3 py-2;
+    border-bottom: 1px solid var(--line-2);
+  }
+
+  .kv-r:last-child { border-bottom: 0; }
+  .kv-k { @apply text-sm text-ink-45; }
+  .kv-v { @apply font-mono text-md font-bold text-ink text-right; }
+
+  /* ── badges ────────────────────────────────────────────────────────────── */
+  /* Independent facts, each with its own unit. Joined into a sentence they read as prose and have
+     to be consumed in order; as badges they can be scanned, and it is obvious they are separate
+     measurements rather than one claim. */
+  .badges { @apply flex flex-wrap gap-1; }
+
+  .badge-i {
+    @apply inline-flex items-center rounded-full text-cap font-bold;
+    padding: 3px 9px;
+    background: var(--line-2);
+    color: var(--ink-70);
+  }
+
+  .badge-i.warn { background: var(--warn-soft); color: var(--warn); }
+  .badge-i.ok { background: var(--ok-soft); color: var(--ok); }
+
+  /* ── progressive disclosure ────────────────────────────────────────────── */
+  /* Native <details>/<summary>. No click handler, no toggled class, no remembered state: the
+     browser already opens and closes, already tells a screen reader what it did, and already
+     answers the keyboard. Reimplementing that in JS costs code and adds one more piece of state to
+     fall out of sync, for less.
+     What CLASSIFIES stays visible; what EXPLAINS goes inside. The operator scans to learn how many
+     problems there are and of what kind, then reads only the one they chose to fix. */
+  .disclose { @apply mt-1; }
+
+  /* Secondary weight, secondary colour. In brand orange and bold these labels competed with the
+     problem titles and with the primary button — and a way OUT of the screen should never outrank
+     the thing the screen is about. Someone should find this link only when they go looking for it.
+     8px of vertical padding: 11px of text is not something to aim at, and a mis-click here opens a
+     paragraph in the middle of a list the operator was scanning. */
+  .disclose > summary {
+    @apply inline-flex items-center gap-1 text-sm text-ink-45 cursor-pointer;
+    font-weight: 400;
+    list-style: none;
+    padding: 8px 0;
+  }
+
+  .disclose > summary::-webkit-details-marker { display: none; }
+
+  /* The marker is drawn here so it can rotate, and because the platform default differs between
+     engines — a disclosure whose affordance changes shape between machines teaches nothing. */
+  .disclose > summary::before {
+    content: "";
+    width: 0; height: 0;
+    border-left: 4px solid currentColor;
+    border-top: 3.5px solid transparent;
+    border-bottom: 3.5px solid transparent;
+    transition: transform var(--t-fast) var(--ease);
+  }
+
+  .disclose[open] > summary::before { transform: rotate(90deg) translateX(-1px); }
+  .disclose > summary:hover { @apply text-ink; }
+
+  /* Group variant: a disclosure that hides a whole section rather than one paragraph. Its summary
+     is a section label, so it keeps the uppercase treatment the other section headers use. */
+  .disclose.group > summary {
+    @apply text-cap font-extrabold uppercase text-ink-45;
+    letter-spacing: .1em;
+  }
+
+  /* Room around the revealed text. At 4px it touched the summary above it and whatever came after,
+     so the paragraph read as if it had been pasted between two unrelated things. The left rule and
+     the indent do the other half of the job: they say this text belongs to the summary that opened
+     it, which is the one relationship the disclosure has to make obvious. */
+  .disclose > *:not(summary) {
+    @apply text-sm text-ink-45 pt-2 pb-3 pl-3;
+    line-height: var(--lh-body);
+    border-left: 2px solid var(--line);
+    margin-left: 2px;
+  }
+
+  .disclose.inline > *:not(summary) { @apply pb-2; }
+
+  /* Inline variant: sits on the same row as its label instead of below it. */
+  .disclose.inline { @apply mt-0 ml-2; }
+
+  /* The inventory disclosure sits inside a card, so its summary needs the card's own horizontal
+     padding and a rule above it — flush against the header it read as part of the line before. */
+  .disclose.inv-drop > summary {
+    @apply px-3;
+    border-top: 1px solid var(--line-2);
+    padding-top: var(--s3);
+    padding-bottom: var(--s3);
+  }
+  .disclose.inv-drop > *:not(summary) { @apply pl-0 pb-0; border-left: 0; margin-left: 0; }
+
+  /* Footer of the colours tab. The palette NAME is the only part of that line carrying
+     information — the rest is preamble — and it was the part being truncated. Now the button is
+     out of the shrink calculation, so the ellipsis can only ever eat the preamble. */
+  .pf-palbar {
+    @apply flex items-center justify-between gap-2 p-3;
+    border-top: 1px solid var(--line-2);
+  }
+  .pf-palbar-t {
+    @apply flex-1 min-w-0 text-sm text-ink-45;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pf-palbar-t strong { @apply font-bold text-ink; }
+  .pf-palbar-t.none { @apply font-semibold; color: var(--warn); }
+  .pf-palbar > button { flex-shrink: 0; }
+
+  /* The picker grid inside the modal needs the same inset as the cards above it, or it reads as a
+     denser block glued to the card edges. */
+  .pal-doc-grid { @apply p-3; gap: var(--s1); }
+
+  /* ── swatch grid ───────────────────────────────────────────────────────── */
+  /* Scanning is a different job from deciding. A wide band per colour was defensible for a dozen
+     colours and wrong for 128: each one cost a 44px block plus three text nodes, so the list became
+     hundreds of DOM nodes and a scroll that never ends. Nobody reads 128 values in a sweep — they
+     read the COLOUR, then look up the number for the one that matters. Area to judge a colour does
+     not disappear; it moves to the detail, which is where the decision happens. */
+  .sw-grid {
+    @apply grid p-3;
+    grid-template-columns: repeat(auto-fill, minmax(28px, 1fr));
+    gap: var(--s1);
+    background: var(--bench);
+  }
+
+  .sw {
+    @apply relative p-0 rounded-sm cursor-pointer;
+    aspect-ratio: 1;
+    /* 4.35:1 on paper. A white document colour is 1.04:1 against it and would simply not exist on
+       screen without this outline. */
+    border: 1px solid var(--border);
+    transition: transform var(--t-fast) var(--ease);
+  }
+
+  .sw:hover { transform: scale(1.12); z-index: 1; }
+  .sw.on { box-shadow: 0 0 0 2px var(--brand); z-index: 2; }
+
+  /* Off-palette: a corner wedge, not a colour change. Recolouring a SWATCH to mark its state is the
+     one thing this grid can never do — the swatch's colour is the data. */
+  .sw.off::after {
+    content: "";
+    position: absolute; top: -1px; right: -1px;
+    border-top: 7px solid var(--warn);
+    border-left: 7px solid transparent;
+  }
+
+  /* The palette grid and the picker grid use the SAME measure as the colours tab. Big blocks here
+     carried no extra information and made a ten-colour palette need scrolling. */
+  .pal-grid, .pal-doc-grid { @apply grid p-0; grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: var(--s2); background: transparent; }
+  .pal-grid { @apply mt-2; }
+  .pal-doc-grid { @apply p-3; background: var(--bench); }
+
+  /* Detail on demand, same pattern as the colours tab: the grid is for scanning, this is for
+     deciding. It only appears for the ACTIVE palette — renaming a colour in a palette that is not
+     in force is an action with no visible consequence. */
+  .pal-edit { @apply flex items-center gap-3 mt-3 p-3 rounded-sm; background: var(--bench); }
+  .pal-edit-sw { @apply rounded-sm; width: 40px; height: 40px; flex: 0 0 40px; border: 1px solid var(--border); }
+  .pal-edit-b { @apply flex-1 min-w-0 flex flex-col gap-1; }
+  .pal-edit-v { @apply font-mono text-sm text-ink-70; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* No frame until focus: the name is content, not a form to fill in. */
+  .pal-edit-n { @apply w-full min-w-0 text-md text-ink bg-transparent; border: 1px solid transparent; border-radius: var(--r-sm); padding: 3px 6px; font-family: var(--font-sans); }
+  .pal-edit-n:hover { border-color: var(--line); }
+  .pal-edit-n:focus { border-color: var(--brand); background: var(--card); outline: none; }
+  /* 8px of padding around the delete: on a 340px panel a bare glyph is a mis-click waiting. */
+  .pal-edit-x { @apply flex items-center justify-center rounded-sm cursor-pointer bg-transparent text-ink-45; width: 32px; height: 32px; flex: 0 0 32px; padding: 8px; border: 1px solid var(--line); }
+  .pal-edit-x:hover { background: var(--err-soft); color: var(--err); border-color: var(--err); }
+  .pal-edit-x svg, .pal-del svg { @apply w-full h-full; }
+
+  /* ── bulk actions ──────────────────────────────────────────────────────── */
+  /* Isolated on purpose. Converting every colour in a drawing is not a continuation of browsing the
+     list — it rewrites the client's artwork, and it once painted a file black. It gets its own
+     block, away from the scroll, and it asks first. */
+  .bulk {
+    @apply flex flex-col gap-2 p-3 rounded-sm;
+    background: var(--warn-soft);
+    border: 1px solid var(--warn);
+  }
+
+  .bulk-t {
+    @apply flex items-center gap-2 text-cap font-extrabold uppercase;
+    color: var(--warn); letter-spacing: .1em;
+  }
+
+  .bulk-b { @apply flex gap-2; }
+  .bulk-b > button { @apply flex-1; }
+
+  .bulk-confirm { @apply flex flex-col gap-2 p-3 rounded-sm bg-card border border-warn; }
+  .bulk-q { @apply text-md text-ink; line-height: var(--lh-body); }
+
+  /* ── ink card ──────────────────────────────────────────────────────────── */
+  /* This screen's signature. A print colour becomes a wide BAND with its value in mono below — the
+     drawdown card already on the shop's bench. A grid of squares gives ~40px of colour in a 340px
+     column, which is not enough area to judge a print colour by, and it hides the value in a
+     tooltip nobody reads while scanning. */
+  .ink-list {
+    @apply flex flex-col gap-2 p-3;
+    background: var(--bench);
+  }
+
+  .ink {
+    @apply block w-full text-left p-0 rounded-sm border border-border bg-card
+           cursor-pointer overflow-hidden;
+    transition: box-shadow var(--t-fast) var(--ease);
+  }
+
+  .ink:hover { @apply shadow-raised; }
+  .ink.on { box-shadow: 0 0 0 2px var(--brand); }
+
+  /* Off-palette: a bar down the side, because a colour outside what was agreed has to stand out
+     while scanning the list, not after reading a label. */
+  .ink.off { border-left: 3px solid var(--warn); }
+
+  .ink-band { @apply block w-full; height: 44px; }
+  .ink-b { @apply flex items-baseline gap-2 px-3; padding-top: 7px; padding-bottom: 8px; }
+  .ink-v { @apply flex-1 min-w-0 font-mono text-md text-ink; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ink-m { @apply text-cap font-bold text-ink-45; letter-spacing: .06em; }
+  .ink-p { @apply font-mono text-sm font-bold text-brand; }
+
+  /* ── header utility ────────────────────────────────────────────────────── */
+  /* Voice is a trade-show feature, not the product's central action. As a floating button it ended
+     up on top of "optimise the file" — an accessory covering the one control that rewrites the
+     client's artwork. It belongs where global utilities live: next to the language picker. */
+  .head-mic {
+    @apply flex items-center justify-center rounded-full cursor-pointer;
+    width: 30px; height: 30px; flex: 0 0 30px;
+    background: rgba(255, 255, 255, .12);
+    border: 1px solid rgba(255, 255, 255, .22);
+    transition: background var(--t-fast) var(--ease);
+  }
+
+  .head-mic:hover { background: rgba(255, 255, 255, .22); }
+  .head-mic svg { width: 15px; height: 15px; }
+  .head-mic.rec { background: var(--err); border-color: var(--err); }
+
+  /* ── welcome state ─────────────────────────────────────────────────────── */
+  /* The screen with nothing to report should point at the next step, not explain the product. The
+     operator did not open a docker to read about it. */
+  .welcome {
+    @apply flex flex-col items-center gap-2 px-4 py-6 rounded-md border border-line bg-card text-center;
+  }
+
+  .welcome-ic { @apply flex text-brand; width: 36px; height: 36px; }
+  .welcome-ic svg { @apply w-full h-full; }
+  .welcome-t { @apply text-lg font-extrabold text-ink; }
+  .welcome-d { @apply text-sm text-ink-45; line-height: var(--lh-body); max-width: 28ch; }
+
+  /* ── empty state ───────────────────────────────────────────────────────── */
+  /* An area producing no information must not look like an area producing information. The result
+     card used to reserve its full height for a title and an empty bar, so the screen's loudest
+     block was the one with nothing to say. */
+  .empty {
+    @apply flex flex-col gap-1 px-3 py-3 rounded-sm border border-line;
+    background: var(--card);
+  }
+
+  .empty-t { @apply text-cap font-extrabold uppercase text-ink-45; letter-spacing: .1em; }
+  .empty-d { @apply text-sm text-ink-45; line-height: var(--lh-body); }
+
+  /* ── primary action strip ──────────────────────────────────────────────── */
+  /* The action lives above the navigation, never inside it. One rewrites the client's file; the
+     other only changes subject. Sharing a strip made the most consequential button on the screen
+     read as a fourth tab. */
+  .cta-bar {
+    @apply px-4 py-3 bg-card border-t border-line;
+    flex: 0 0 auto;
+  }
+
+  .cta-bar > button { @apply w-full; }
+
+  /* ── choice cards ──────────────────────────────────────────────────────── */
+  /* Three boxes that differ only by a border ask the operator to READ before they can choose. The
+     selected one now carries a tinted ground, a heavier border and a check — three signals, so the
+     answer to "what is selected?" is available at a glance and does not depend on seeing colour. */
+  .choice { @apply grid gap-2; grid-template-columns: repeat(3, 1fr); }
+
+  .choice > button {
+    @apply relative flex flex-col items-start gap-1 px-3 py-3 rounded-sm
+           border border-line bg-card cursor-pointer font-sans text-left;
+    transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+  }
+
+  .choice > button:hover { border-color: var(--border); }
+
+  .choice > button .l { @apply text-md font-bold text-ink-70; }
+  .choice > button .d { @apply text-cap text-ink-45; line-height: var(--lh-tight); }
+
+  .choice > button.on {
+    @apply border-brand;
+    background: var(--brand-soft);
+    border-width: 2px;
+    padding: calc(var(--s3) - 1px);
+  }
+
+  .choice > button.on .l { @apply text-brand; }
+  .choice > button.on .d { @apply text-ink-70; }
+
+  /* The check is drawn, not coloured in: a selection communicated only by hue is unreadable for
+     the same operators the status shapes exist for. */
+  .choice > button.on::after {
+    content: "";
+    position: absolute; top: 7px; right: 7px; width: 9px; height: 5px;
+    border-left: 2px solid var(--brand); border-bottom: 2px solid var(--brand);
+    transform: rotate(-45deg);
+  }
+
+  /* ── bottom navigation ─────────────────────────────────────────────────── */
+  /* The column is phone-width, and on a phone navigation lives where the thumb reaches. At the top
+     it competes with the file's identity, which has to stay visible at all times. */
+  .navbar {
+    @apply grid bg-card border-t border-line;
+    grid-template-columns: repeat(3, 1fr);
+    flex: 0 0 auto;
+    padding: var(--s1) var(--s1) calc(var(--s1) + 2px);
+    box-shadow: 0 -1px 12px rgba(40, 20, 10, .05);
+  }
+
+  .nav-i {
+    @apply relative flex flex-col items-center min-h-tap border-0 bg-transparent
+           cursor-pointer font-sans text-cap font-bold text-ink-45 rounded-sm;
+    gap: 3px; padding: 6px 2px;
+    transition: color var(--t-fast) var(--ease);
+  }
+
+  .nav-i svg { width: 22px; height: 22px; }
+  .nav-i:hover { @apply text-ink-70; }
+
+  /* The current destination gets colour AND a bar over the icon. Two signals, because colour alone
+     does not inform. */
+  .nav-i.on { @apply text-brand; }
+  .nav-i.on::before {
+    content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 26px; height: 3px; border-radius: 0 0 3px 3px; background: var(--brand);
+  }
+
+  .nav-dot {
+    @apply absolute hidden rounded-full bg-err;
+    top: 5px; right: calc(50% - 18px); width: 7px; height: 7px;
+  }
+  .nav-dot.show { @apply block; }
+
+  /* ── panes ─────────────────────────────────────────────────────────────── */
+  .pane { @apply hidden flex-col gap-3; }
+  .pane.on { @apply flex; }
+
+  /* ── fields ────────────────────────────────────────────────────────────── */
+  .field {
+    @apply w-full min-w-0 px-3 rounded-sm border border-border font-sans text-md text-ink;
+    background: var(--field);
+    padding-top: 9px; padding-bottom: 9px;
+  }
+
+  .note { @apply text-sm text-ink-45; line-height: var(--lh-body); }
+}
