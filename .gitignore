@@ -1,0 +1,48 @@
+# ── .NET build output ────────────────────────────────────────────────────────
+# Everything under bin/ and obj/ is reproduced by a plain build. Every DLL the
+# projects use comes from NuGet (all *.csproj use PackageReference, no HintPath
+# to a loose DLL anywhere), so `dotnet restore` / MSBuild restore brings back
+# the exact versions pinned in the csproj files. Nothing binary needs committing.
+[Bb]in/
+[Oo]bj/
+
+# Final build output of scripts/build-all.ps1 (payloads + single-EXE installer).
+dist/
+
+# Archive of shipped client installers (~67 MB each) — build-all.ps1 deploy
+# target, not source. Keep these in normal file storage, not in git history.
+shared/bin/
+
+# Host-simulation payload assembled from build output (duplicates the 57 MB
+# whisper model + Whisper.net DLLs that NuGet restores). The source of the
+# scratch tool (Program.cs, VoiceTest.csproj) stays tracked.
+scratch-voicetest/hostsim/
+
+# ── Node ─────────────────────────────────────────────────────────────────────
+# package-lock.json IS tracked: after cloning, `npm ci` reinstalls byte-exact
+# versions of everything (here only the tailwindcss build-time toolchain).
+node_modules/
+
+# ── IDE / user-specific state ────────────────────────────────────────────────
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+
+# ── Test & tooling residue ───────────────────────────────────────────────────
+TestResults/
+*.log
+npm-debug.log*
+
+# CorelDRAW auto-backups created next to any opened test file.
+Backup_of_*.cdr
+
+# ── Deliberately TRACKED, do not add rules for these ─────────────────────────
+# assets/voice/ggml-model.bin (57 MB): ships inside the installer, never
+#   downloaded at runtime (O16) — a fresh clone must build a complete installer.
+# docs/**/*.cdr: the measured fixtures behind the locked decisions (O8/O10/O15).
+# docs/vgcore-tlb-dump.txt: the authoritative VGCore typelib dump.
