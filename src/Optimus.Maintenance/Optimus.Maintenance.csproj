@@ -1,0 +1,70 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Optimus Manutenção — Module 1: the standalone Windows maintenance app.
+
+    A SEPARATE desktop app, launched manually from a desktop shortcut (decision O5): no scheduled
+    task, no background service, no toast. That removes the Task Scheduler dependency, the Session 0
+    problem, and most of the antivirus friction a "cleaner" normally attracts.
+
+    net48 + WebView2 + WPF window built in code (no XAML), mirroring the add-in docker so there is one
+    UI technique in the product, not two. All the logic lives in Optimus.Core (pure rules) and
+    Optimus.Windows (the Win32/WMI execution) — this project is only a shell.
+
+    Requires elevation (app.manifest): without it the Windows folders and other users' profiles are
+    unreachable and the app would honestly report freeing nothing.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Optimus.Maintenance</RootNamespace>
+    <AssemblyName>Optimus.Manutencao</AssemblyName>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- The desktop shortcut IS the discovery mechanism for this module, and a shortcut with a blank
+         generic icon reads as a broken or untrusted program. Same mark as the installer and the
+         CorelDRAW toolbar button, so the three are recognisably one product. -->
+    <ApplicationIcon>../Optimus.Resources/icons/optimus.ico</ApplicationIcon>
+    <!-- x64 explicitly: the machine is 64-bit, the WebView2 runtime is 64-bit, and an x86 process
+         would see a redirected registry/filesystem view — exactly the class of bug this module is
+         built to avoid. It also makes the build copy the x64 WebView2Loader.dll. -->
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWindowsForms>false</UseWindowsForms>
+    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+    <AssemblyTitle>Optimus Manutenção</AssemblyTitle>
+    <Product>Optimus</Product>
+    <Company>Aisten Lab Technology</Company>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Optimus.Core\Optimus.Core.csproj" />
+    <ProjectReference Include="..\Optimus.Windows\Optimus.Windows.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="PresentationFramework" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+    <!-- Only for FolderBrowserDialog: WPF on net48 has no folder picker, and the operator must be able
+         to point the Backup_of_*.cdr sweep at the folder where the shop keeps its art. -->
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+
+  <!-- Operator UI: one self-contained offline HTML file, embedded and served through a WebView2
+       virtual host. Never a CDN, never a webfont — the client's machine may have no internet. -->
+  <ItemGroup>
+    <EmbeddedResource Include="wwwroot/index.html">
+      <LogicalName>maintenance.index.html</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>
