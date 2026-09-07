@@ -401,6 +401,12 @@ namespace Optimus.Core.I18n
             ["opt.pf.fonts.library"] = "In your font folder",
             ["opt.pf.fonts.alsoinstalled"] = "also installed in Windows",
             ["opt.pf.fonts.corel"] = "{0} font(s) available in CorelDRAW",
+            ["opt.pf.fonts.searchph"] = "Search fonts by name",
+            ["opt.pf.fonts.filter.all"] = "All",
+            ["opt.pf.fonts.filter.problems"] = "Has issues",
+            ["opt.pf.fonts.filter.ok"] = "OK",
+            ["opt.pf.fonts.filter.symbol"] = "Symbol",
+            ["opt.pf.fonts.filter.empty"] = "No font matches this filter.",
 
             // ── F9: colour table / palette catalog ─────────────────────────────────
             ["opt.pal.title"] = "Colour table",

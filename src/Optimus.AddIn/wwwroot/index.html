@@ -1148,6 +1148,13 @@ body:has(.modal:not([hidden])) .voice-fab{display:none}
             <span class="pf-sec-t" data-i18n="opt.pf.fonts.title"></span>
             <span class="pf-sec-n" id="pf-fonts-n">—</span>
           </div>
+          <!-- Busca por nome e filtro por status: mesmo padrão que o filtro de cores (F9) já resolve. -->
+          <div class="pal-new">
+            <input type="text" id="fo-search" data-i18n-placeholder="opt.pf.fonts.searchph"
+                   oninput="foSearchTyped()">
+          </div>
+          <div class="pf-filters" id="pf-fonts-filters"></div>
+
           <!-- A canned pangram answers a question nobody asked. What the operator needs to see is
                the CLIENT'S name in the client's font, and that is what this field is for. It is
                deliberately transient: the question of the moment, not a setting. -->
@@ -2864,6 +2871,38 @@ function palFromDoc(pal){ send({ cmd:'paletteCapture', name: pal }); }
 // primeiro. O nome desenhado NA propria fonte e a prova visual.
 function showFontManager(d){ lastFontMgr = d; renderFonts(); }
 
+// ── filtro e busca (mesmo padrão da grade de cores: chips de status + texto livre) ──────────
+var foFilter = 'all', foSearch = '';
+
+function foMatchesFilter(it){
+  if (foFilter === 'all') return true;
+  if (foFilter === 'problems')
+    return it.f.verdict === 'Failed' || it.f.verdict === 'NotInstalled' || it.f.verdict === 'Warning';
+  if (foFilter === 'ok') return it.f.verdict === 'Ok';
+  if (foFilter === 'symbol') return it.f.verdict === 'SymbolFont';
+  return true;
+}
+
+function foMatchesSearch(it){
+  if (!foSearch) return true;
+  return String(it.f.name || '').toLowerCase().indexOf(foSearch) >= 0;
+}
+
+function foSetFilter(f){ foFilter = f; renderFonts(); }
+
+// Mesmo debounce da amostra de texto (250 ms): filtrar a cada tecla numa pasta com centenas de
+// fontes redesenharia a lista inteira a cada letra digitada.
+var foSearchTimer = null;
+function foSearchTyped(){
+  if (foSearchTimer) clearTimeout(foSearchTimer);
+  foSearchTimer = setTimeout(function(){
+    foSearchTimer = null;
+    var el = document.getElementById('fo-search');
+    foSearch = (el ? el.value : '').trim().toLowerCase();
+    renderFonts();
+  }, 250);
+}
+
 function renderFonts(){
   var used = (lastAudit && lastAudit.fonts) || [];
   var reg  = (lastFontMgr && lastFontMgr.fonts) || [];
@@ -2875,10 +2914,22 @@ function renderFonts(){
   var rank = { Failed:0, NotInstalled:1, Warning:2, Ok:3, SymbolFont:4 };
   all.sort(function(a,b){ return (rank[a.f.verdict] || 9) - (rank[b.f.verdict] || 9); });
 
-  document.getElementById('pf-fonts-n').textContent = fmt(all.length);
-  document.getElementById('pf-fonts').innerHTML = all.length === 0
-    ? '<div class="pf-note">' + esc(T('opt.font.empty')) + '</div>'
-    : all.map(function(it){
+  var FO_FILTERS = [['all','opt.pf.fonts.filter.all'],['problems','opt.pf.fonts.filter.problems'],
+                     ['ok','opt.pf.fonts.filter.ok'],['symbol','opt.pf.fonts.filter.symbol']];
+  var filtersHost = document.getElementById('pf-fonts-filters');
+  if (filtersHost){
+    filtersHost.innerHTML = FO_FILTERS.map(function(f){
+      return '<button class="pf-chip' + (foFilter === f[0] ? ' on' : '') + '" onclick="foSetFilter(\'' + f[0] + '\')">'
+           + esc(T(f[1])) + '</button>';
+    }).join('');
+  }
+
+  var shown = all.filter(foMatchesFilter).filter(foMatchesSearch);
+
+  document.getElementById('pf-fonts-n').textContent = fmt(shown.length);
+  document.getElementById('pf-fonts').innerHTML = shown.length === 0
+    ? '<div class="pf-note">' + esc(all.length === 0 ? T('opt.font.empty') : T('opt.pf.fonts.filter.empty')) + '</div>'
+    : shown.map(function(it){
         var f = it.f;
         var cls = (f.verdict === 'Failed' || f.verdict === 'NotInstalled') ? 'err'
                 : f.verdict === 'Warning' ? 'warn'
@@ -2901,7 +2952,7 @@ function renderFonts(){
 
   // Um pedido por fonte, e so uma vez cada. Os bytes viajam em base64, que infla um
   // terco, entao repedir a cada redesenho da lista seria caro sem mudar nada na tela.
-  all.forEach(function(it){ requestFontPreview(it.f.name); });
+  shown.forEach(function(it){ requestFontPreview(it.f.name); });
 }
 
 // ══ especimen da fonte ══════════════════════════════════════════════════════

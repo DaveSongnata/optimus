@@ -401,6 +401,12 @@ namespace Optimus.Core.I18n
             ["opt.pf.fonts.library"] = "En su carpeta de fuentes",
             ["opt.pf.fonts.alsoinstalled"] = "también instalada en Windows",
             ["opt.pf.fonts.corel"] = "{0} fuente(s) disponibles en CorelDRAW",
+            ["opt.pf.fonts.searchph"] = "Buscar fuente por nombre",
+            ["opt.pf.fonts.filter.all"] = "Todas",
+            ["opt.pf.fonts.filter.problems"] = "Con problema",
+            ["opt.pf.fonts.filter.ok"] = "OK",
+            ["opt.pf.fonts.filter.symbol"] = "Símbolo",
+            ["opt.pf.fonts.filter.empty"] = "Ninguna fuente encontrada con ese filtro.",
 
             // ── F9: tabla de colores / catálogo de paletas ─────────────────────────
             ["opt.pal.title"] = "Tabla de colores",
