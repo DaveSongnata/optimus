@@ -7,6 +7,6 @@ namespace Optimus.AddIn
     /// </summary>
     internal static class Build
     {
-        public const string Tag = "1.65.0";
+        public const string Tag = "1.66.0";
     }
 }
