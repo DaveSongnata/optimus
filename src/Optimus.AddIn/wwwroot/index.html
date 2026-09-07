@@ -2012,15 +2012,26 @@ function pfRow(key){
 
 function pfSelect(key){
   if (pfSelKey === key){ pfCloseDetail(); return; }
+  pfShowDetail(key, pfRow(key));
+}
+
+// Separado de pfSelect (clique manual na grade, que ALTERNA aberto/fechado) porque a cor lida do
+// objeto selecionado no CorelDRAW precisa poder abrir o mesmo painel sem essa alternância — senão
+// selecionar de novo o mesmo objeto fecharia o detalhe que ele mesmo acabou de abrir.
+function pfShowDetail(key, r){
   pfSelKey = key;
   pfPickKey = null;
-  var r = pfRow(key);
   if (!r) return;
 
   document.getElementById('pf-det-c').setAttribute('style', swatchCss(r));
   document.getElementById('pf-det-v').textContent = r.spotName || hexOf(r) || r.model;
-  document.getElementById('pf-det-u').textContent =
-    T('opt.pf.colors.uses', fmt(r.timesUsed), fmtPct(r.usage)) + (r.components ? '  ·  ' + r.components : '');
+  // 'measured === false' só existe na leitura por seleção (RunColorFromSelection, C#) quando a cor
+  // não está na última auditoria: mostrar "0 usos, 0,0%" nesse caso seria inventar uma medição que
+  // não foi feita.
+  document.getElementById('pf-det-u').textContent = (r.measured === false
+      ? T('opt.pf.colors.unmeasured')
+      : T('opt.pf.colors.uses', fmt(r.timesUsed), fmtPct(r.usage)))
+    + (r.components ? '  ·  ' + r.components : '');
   var tag = document.getElementById('pf-det-tag');
   tag.className = 'pf-det-tag ' + (r.inPalette ? 'in' : 'out');
   tag.textContent = r.inPalette ? r.registeredAs : T('opt.pal.notregistered');
@@ -2031,6 +2042,15 @@ function pfSelect(key){
   renderColorGrid();
   var det = document.getElementById('pf-det');
   if (det.scrollIntoView) det.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+// C# → JS: a cor do objeto selecionado agora no CorelDRAW (polled enquanto a aba Cores está
+// aberta — ver statusPoll). Silenciosamente ignorado quando não há cor a mostrar (nada
+// selecionado, seleção múltipla, grupo, preenchimento sem cor única): a tela simplesmente
+// continua mostrando o que já estava aberto, em vez de fechar o detalhe a cada seleção vazia.
+function showSelectedColor(d){
+  if (!d || !d.ok || !d.key) return;
+  pfShowDetail(d.key, d);
 }
 
 // Trocar ESCOLHENDO uma amostra da paleta - digitar hexadecimal e o ultimo
@@ -3348,6 +3368,8 @@ window.optimusReceive = function(d){
     showSvgImported(d);
   } else if (d.type === 'colorTable'){
     if (d.ok) showColorTable(d);
+  } else if (d.type === 'selectedColor'){
+    showSelectedColor(d);
   } else if (d.type === 'colorsConverted'){
     showConverted(d);
   } else if (d.type === 'fontPreview'){
@@ -3658,7 +3680,16 @@ function bootStep(label, fn){
 
 bootStep('sliders', renderSliders);
 bootStep('status', function(){ send({cmd:'status'}); });
-bootStep('statusPoll', function(){ setInterval(function(){ if(!busy) send({cmd:'status'}); }, 2500); });
+bootStep('statusPoll', function(){
+  setInterval(function(){
+    if (busy) return;
+    send({ cmd:'status' });
+    // Só na aba Cores, e só quando não ocupado: ler a cor da seleção nas outras abas gastaria COM
+    // por nada que ninguém está olhando, e um "pegar a cor" no meio de uma otimização é justamente
+    // o tipo de trabalho concorrente que este produto evita.
+    if (currentTab === 'cores') send({ cmd:'colorFromSelection' });
+  }, 2500);
+});
 // The font catalog is shop-wide, not per-document — load it independently of any audit run.
 bootStep('fontManager', function(){ send({cmd:'fontManager'}); });
 // The state machine has to run BEFORE any data arrives, or the page opens showing every block the

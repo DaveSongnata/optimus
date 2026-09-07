@@ -39,6 +39,13 @@ namespace Optimus.AddIn.Ui
         private ColorAudit? _lastColorAudit;
         private bool _usageMeasured;
 
+        // De-dupe for "colorFromSelection": the page polls this every 2.5s while the Cores tab is
+        // open, and re-posting (and re-rendering) the same answer on every tick would fight whatever
+        // the operator is doing with the detail panel. Reset whenever the palette itself changes
+        // (see PostColorTable) so a colour just registered flips from "fora da paleta" to "cadastrada"
+        // on the very next tick, even with the same object still selected.
+        private string _lastSelectionSignature = "";
+
         // Font manager (F10) — same shop-wide catalog shape.
         private readonly FontRegistry _fontRegistry = FontRegistryStore.Service();
 
@@ -198,6 +205,9 @@ namespace Optimus.AddIn.Ui
                     case "paletteColorAddManual": PaletteColorAddManual(json); break;
                     case "convertColors": RunConvertColors(json); break;
                     case "colorReplace": RunColorReplace(json); break;
+                    // Polled while the "Cores" tab is open (see statusPoll): reads the fill of
+                    // whatever is selected in CorelDRAW right now and points to it in the palette.
+                    case "colorFromSelection": RunColorFromSelection(); break;
 
                     // ── font manager (F10) ─────────────────────────────────────────────
                     case "fontManager": PostFontManager(); break;
@@ -631,6 +641,11 @@ namespace Optimus.AddIn.Ui
 
         private void PostColorTable()
         {
+            // Every palette CRUD command and every fresh audit routes through here — the one place
+            // that can invalidate the selection cache below without threading a flag through each of
+            // them individually.
+            _lastSelectionSignature = "";
+
             if (_lastColorAudit == null) { Post(new { type = "colorTable", ok = false }); return; }
 
             List<ColorTableRow> rows = PaletteMatcher.BuildTable(_lastColorAudit, _palettes);
@@ -756,6 +771,85 @@ namespace Optimus.AddIn.Ui
 
             PostPalettes();
             PostColorTable();
+        }
+
+        /// <summary>
+        /// "Ao selecionar um objeto, aponta a cor dele na paleta" — reads the fill of whatever is
+        /// selected right now and tells the page whether it is registered, so <c>pfShowDetail</c> can
+        /// highlight the same swatch/detail a manual click on the colour grid would.
+        ///
+        /// <para>
+        /// Leaf-only and read-only (O24): a group's <c>Fill</c> is an aggregate, never a colour to
+        /// report. De-duped by <see cref="_lastSelectionSignature"/> so a 2.5 s poll with nothing new
+        /// to say does not re-render the detail panel out from under the operator.
+        /// </para>
+        /// </summary>
+        private void RunColorFromSelection()
+        {
+            SelectionColorResult result;
+            try { result = SelectionColorReader.Read(_app); }
+            catch (Exception ex) { OptimusLog.Write("colorFromSelection FAILED: " + ex.Message); return; }
+
+            ColorRecord? color = result.Color;
+            string signature = result.Status + "|" + (color?.Key ?? "");
+            if (signature == _lastSelectionSignature) return;
+            _lastSelectionSignature = signature;
+
+            if (color == null)
+            {
+                Post(new { type = "selectedColor", ok = false, reason = result.Status.ToString() });
+                return;
+            }
+
+            // Same numbers the colour table would show for this key, when there IS a table to read
+            // them from — a colour picked in CorelDRAW and the same colour clicked in the grid must
+            // never disagree about how much of the drawing it covers.
+            int timesUsed = 0;
+            double usage = 0;
+            bool measured = false;
+            if (_lastColorAudit != null)
+            {
+                int total = 0;
+                foreach (ColorRecord u in _lastColorAudit.Unique) total += _lastColorAudit.TimesUsed(u);
+                foreach (ColorRecord c in _lastColorAudit.Unique)
+                {
+                    if (c.Key != color.Key) continue;
+                    timesUsed = _lastColorAudit.TimesUsed(c);
+                    usage = total > 0 ? Math.Round(timesUsed * 100.0 / total, 1) : 0;
+                    measured = true;
+                    break;
+                }
+            }
+
+            // The active palette ONLY — same rule PaletteMatcher applies to the audited table.
+            // Matching against every registered palette would mean a colour that belongs to a
+            // different client's palette reads as "fine", which is exactly the mistake this alert
+            // exists to catch.
+            string registeredAs = "", registeredPalette = "";
+            if (_palettes.ActiveColorsByKey().TryGetValue(color.Key, out PaletteColor? match))
+            {
+                registeredAs = match!.Name;
+                registeredPalette = _palettes.ActiveName;
+            }
+
+            Post(new
+            {
+                type = "selectedColor",
+                ok = true,
+                key = color.Key,
+                model = color.Model.ToString(),
+                hex = color.Hex,
+                rgb = color.Rgb,
+                rgbKnown = color.RgbKnown,
+                components = color.Components,
+                spotName = color.SpotName,
+                usage,
+                timesUsed,
+                measured,
+                registeredAs,
+                registeredPalette,
+                inPalette = registeredAs.Length > 0,
+            });
         }
 
         private void PaletteColorRemove(string json)
@@ -1355,7 +1449,7 @@ OptimusLog.Write($"ConvertColors: alvo={(toCmyk ? "CMYK" : "RGB")} " +
         /// deu no que deu. Silenciar por volume tem que parar onde começa a informação.
         /// </remarks>
         private static bool IsChatty(string cmd) =>
-            cmd == "status" || cmd == "voiceStatus";
+            cmd == "status" || cmd == "voiceStatus" || cmd == "colorFromSelection";
 
         private void PostVoiceStatus()
         {

@@ -373,6 +373,7 @@ namespace Optimus.Core.I18n
             ["opt.pf.colors.measure"] = "Measure how much of the drawing each colour covers",
             ["opt.pf.colors.partial"] = "Counting… the order can still change",
             ["opt.pf.colors.nousage"] = "Per-colour usage was not measured in this pass.",
+            ["opt.pf.colors.unmeasured"] = "Colour read from the selected object — not yet measured in this analysis.",
             ["opt.pf.replace.pick"] = "Replace with a palette colour",
             ["opt.pf.replace.manual"] = "or type the value",
             ["opt.pf.replace.hexph"] = "RRGGBB",
