@@ -2768,11 +2768,18 @@ function palDocConfirm(){
   if (!keys.length || !palDocFor) return;
   // Um comando por cor: o host já sabe adicionar uma, e reaproveitar isso evita um caminho novo
   // no C# que precisaria da mesma validação de novo.
+  //
+  // 'paletteColorAdd' (por CHAVE) é o único caminho certo aqui: a linha 'r' já carrega a
+  // identidade exata lida do documento (modelo, hex e componentes CMYK). O caminho antigo
+  // ('paletteColorAddManual', só hex) jogava tudo isso fora e recalculava o hex a partir do RGB
+  // de TELA — para uma cor CMYK isso produz uma chave 'Rgb|HEX' que NUNCA bate com a chave
+  // 'Cmyk|HEX+componentes' que a auditoria lê do mesmo objeto. Resultado medido: escolher a cor
+  // exata da grade e, na próxima análise, vê-la marcada como FORA DA PALETA — um hex idêntico
+  // reprovando contra si mesmo porque o modelo da cor tinha sido trocado por engano no caminho.
   keys.forEach(function(k){
     var r = palDocSel[k];
-    var hex = hexClean(hexOf(r));
-    if (hex) send({ cmd:'paletteColorAddManual', palette: palDocFor, hex: hex,
-                    colorName: r.registeredAs || '' });
+    if (r && r.key) send({ cmd:'paletteColorAdd', palette: palDocFor, key: r.key,
+                            name: r.registeredAs || '' });
   });
   palDocClose();
 }

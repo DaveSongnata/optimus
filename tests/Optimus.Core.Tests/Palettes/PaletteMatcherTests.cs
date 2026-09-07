@@ -62,5 +62,46 @@ namespace Optimus.Core.Tests.Palettes
             var alerts = PaletteMatcher.NotInAnyPalette(audit, PaletteRegistry.InMemory());
             Assert.Single(alerts);
         }
+
+        [Fact]
+        public void A_cmyk_color_registered_with_full_identity_matches_the_audited_shape()
+        {
+            // Mirrors the correct path (PaletteColorAdd, OptimusBridge): Model, Hex AND Components
+            // copied straight from the ColorRecord the audit produced — never re-typed.
+            var audit = new ColorAudit();
+            audit.Add(new ColorRecord { Model = ColorModel.Cmyk, Hex = "F58634", Components = "C0 M50 Y90 K0" });
+
+            PaletteRegistry registry = PaletteRegistry.InMemory();
+            registry.AddPalette("Cliente X");
+            registry.AddColor("Cliente X", new PaletteColor
+            {
+                Name = "laranja",
+                Model = ColorModel.Cmyk,
+                Hex = "F58634",
+                Components = "C0 M50 Y90 K0",
+            });
+
+            Assert.Empty(PaletteMatcher.NotInAnyPalette(audit, registry));
+        }
+
+        [Fact]
+        public void A_cmyk_color_registered_as_a_bare_rgb_hex_never_matches_the_cmyk_original()
+        {
+            // The exact trap that was in palDocConfirm() (index.html): picking a CMYK swatch straight
+            // from the document's colour grid and re-adding it to the palette using only its on-screen
+            // RGB hex (Model forced to Rgb, Components dropped) builds a DIFFERENT key from the one the
+            // audit reads off that same shape. An operator who picked "the exact colour" from the file
+            // still sees it flagged FORA DA PALETA on the next analysis — this pins the behaviour down
+            // so the matcher never grows a lenient hex-only fallback that would hide the mistake instead
+            // of forcing the caller to preserve the model and CMYK components.
+            var audit = new ColorAudit();
+            audit.Add(new ColorRecord { Model = ColorModel.Cmyk, Hex = "F58634", Components = "C0 M50 Y90 K0" });
+
+            PaletteRegistry registry = PaletteRegistry.InMemory();
+            registry.AddPalette("Cliente X");
+            registry.AddColor("Cliente X", new PaletteColor { Name = "laranja", Model = ColorModel.Rgb, Hex = "F58634" });
+
+            Assert.Single(PaletteMatcher.NotInAnyPalette(audit, registry));
+        }
     }
 }
