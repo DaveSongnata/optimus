@@ -399,6 +399,7 @@ namespace Optimus.Core.I18n
             ["opt.pf.colors.partial"] = "Contando… a ordem ainda pode mudar",
             ["opt.pf.colors.nousage"] = "Uso por cor não medido nesta passagem.",
             ["opt.pf.colors.unmeasured"] = "Cor lida do objeto selecionado — ainda não medida nesta análise.",
+            ["opt.pf.colors.similarto"] = "Mesma aparência de \"{0}\" — mas é uma tinta diferente (outro modelo de cor), por isso conta como fora da paleta.",
             ["opt.pf.replace.pick"] = "Trocar por uma cor da paleta",
             ["opt.pf.replace.manual"] = "ou digitar o valor",
             ["opt.pf.replace.hexph"] = "RRGGBB",

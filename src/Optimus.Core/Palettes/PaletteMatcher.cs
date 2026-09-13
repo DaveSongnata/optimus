@@ -17,6 +17,19 @@ namespace Optimus.Core.Palettes
         public string RegisteredAs { get; set; } = "";
         public string RegisteredPalette { get; set; } = "";
         public bool InPalette => RegisteredAs.Length > 0;
+
+        /// <summary>
+        /// Name of a DIFFERENT registered colour that renders as the exact same hex — set only when
+        /// this colour is NOT itself registered. Real-file case: a CMYK ink (say C0 M60 Y100 K0) and
+        /// an RGB screen colour the shop already registered both read back the identical
+        /// <c>Color.HexValue</c> ("F58634"), because that field expresses the RGB-ish rendering
+        /// regardless of the underlying model (O19). They are genuinely different keys — a CMYK recipe
+        /// and an RGB value are different colour specifications, same reasoning as O27's "chapa vs
+        /// rico" — but an operator staring at two identical-looking swatches, one flagged registered
+        /// and the other not, has no way to tell that apart from the swatch alone. This is that
+        /// explanation, not a merge: the colour still shows FORA DA PALETA, just with a reason.
+        /// </summary>
+        public string SimilarTo { get; set; } = "";
     }
 
     /// <summary>
@@ -32,6 +45,7 @@ namespace Optimus.Core.Palettes
             if (audit == null) return rows;
 
             Dictionary<string, PaletteColor> registered = registry?.ActiveColorsByKey() ?? new Dictionary<string, PaletteColor>();
+            Dictionary<string, PaletteColor> registeredByHex = ActiveColorsByHex(registry);
             int total = audit.Unique.Sum(c => audit.TimesUsed(c));
 
             foreach (ColorRecord color in audit.Unique.OrderByDescending(c => audit.TimesUsed(c)))
@@ -49,11 +63,31 @@ namespace Optimus.Core.Palettes
                     row.RegisteredAs = match!.Name;
                     row.RegisteredPalette = OwningPaletteName(registry!, match);
                 }
+                else if (registeredByHex.TryGetValue(ColorKeyFormat.NormalizeHex(color.Hex), out PaletteColor? similar))
+                {
+                    row.SimilarTo = similar!.Name;
+                }
 
                 rows.Add(row);
             }
 
             return rows;
+        }
+
+        /// <summary>Active palette's colours keyed by rendered hex alone (model/components ignored) —
+        /// used ONLY to explain a FORA DA PALETA colour, never to decide whether one is registered.</summary>
+        private static Dictionary<string, PaletteColor> ActiveColorsByHex(PaletteRegistry? registry)
+        {
+            var map = new Dictionary<string, PaletteColor>();
+            ColorPalette? active = registry?.Active;
+            if (active == null) return map;
+
+            foreach (PaletteColor color in active.Colors)
+            {
+                string hex = ColorKeyFormat.NormalizeHex(color.Hex);
+                if (hex.Length > 0 && !map.ContainsKey(hex)) map[hex] = color;
+            }
+            return map;
         }
 
         /// <summary>Colours used in the file that are NOT part of any registered palette — the alert.</summary>

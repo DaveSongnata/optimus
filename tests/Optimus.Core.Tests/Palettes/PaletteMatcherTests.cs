@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Optimus.Core.Audit;
 using Optimus.Core.Palettes;
 using Xunit;
@@ -120,6 +121,63 @@ namespace Optimus.Core.Tests.Palettes
             registry.AddColor("Hewlla", new PaletteColor { Name = "laranja", Model = ColorModel.Rgb, Hex = "F58634" });
 
             Assert.Empty(PaletteMatcher.NotInAnyPalette(audit, registry));
+        }
+
+        [Fact]
+        public void A_cmyk_ink_that_renders_as_a_registered_hex_is_flagged_with_SimilarTo()
+        {
+            // Reported on a real file (2026-09): the shop had "F58634" registered as RGB. A CMYK fill
+            // elsewhere in the same document (C0 M60 Y100 K0) reads back the SAME "F58634" from
+            // Color.HexValue — because that field renders the RGB-ish appearance regardless of the
+            // underlying model — so the swatch looks identical on screen. It is correctly still FORA
+            // DA PALETA (a CMYK recipe and an RGB value are different colour specifications, same
+            // reasoning as O27's "chapa vs rico"), but the operator needs to be told WHY two
+            // identical-looking swatches disagree, or it reads as the palette check being broken.
+            var audit = new ColorAudit();
+            audit.Add(new ColorRecord { Model = ColorModel.Cmyk, Hex = "F58634", Components = "C0 M60 Y100 K0" });
+
+            PaletteRegistry registry = PaletteRegistry.InMemory();
+            registry.AddPalette("Hewlla");
+            registry.AddColor("Hewlla", new PaletteColor { Name = "laranja", Model = ColorModel.Rgb, Hex = "F58634" });
+
+            List<ColorTableRow> rows = PaletteMatcher.BuildTable(audit, registry);
+
+            Assert.False(rows[0].InPalette);
+            Assert.Equal("laranja", rows[0].SimilarTo);
+        }
+
+        [Fact]
+        public void A_registered_colour_never_carries_a_SimilarTo_hint()
+        {
+            // The hint is an explanation for FORA DA PALETA, never a second badge on a colour that's
+            // already fine — showing both would read as a contradiction.
+            var audit = new ColorAudit();
+            audit.Add(new ColorRecord { Model = ColorModel.Rgb, Hex = "F58634" });
+
+            PaletteRegistry registry = PaletteRegistry.InMemory();
+            registry.AddPalette("Hewlla");
+            registry.AddColor("Hewlla", new PaletteColor { Name = "laranja", Model = ColorModel.Rgb, Hex = "F58634" });
+
+            List<ColorTableRow> rows = PaletteMatcher.BuildTable(audit, registry);
+
+            Assert.True(rows[0].InPalette);
+            Assert.Equal("", rows[0].SimilarTo);
+        }
+
+        [Fact]
+        public void An_unrelated_colour_gets_no_SimilarTo_hint_either()
+        {
+            var audit = new ColorAudit();
+            audit.Add(new ColorRecord { Model = ColorModel.Rgb, Hex = "0000FF" });
+
+            PaletteRegistry registry = PaletteRegistry.InMemory();
+            registry.AddPalette("Hewlla");
+            registry.AddColor("Hewlla", new PaletteColor { Name = "laranja", Model = ColorModel.Rgb, Hex = "F58634" });
+
+            List<ColorTableRow> rows = PaletteMatcher.BuildTable(audit, registry);
+
+            Assert.False(rows[0].InPalette);
+            Assert.Equal("", rows[0].SimilarTo);
         }
     }
 }

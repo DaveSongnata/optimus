@@ -235,6 +235,7 @@ body:has(.modal:not([hidden])) .voice-fab{display:none}
 @keyframes voice-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @keyframes voice-pop{0%{transform:scale(1)}40%{transform:scale(1.14)}100%{transform:scale(1)}}
 @keyframes voice-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.shake{animation:voice-shake .4s}
 
 .voice-panel{position:fixed;right:18px;bottom:84px;width:276px;max-width:calc(100vw - 36px);
   background:var(--card);border:1px solid var(--line);border-radius:14px;
@@ -1059,6 +1060,11 @@ body:has(.modal:not([hidden])) .voice-fab{display:none}
                   <span class="pf-det-tag" id="pf-det-tag"></span>
                 </div>
               </div>
+              <!-- So aparece quando a cor NAO esta cadastrada mas tem a mesma aparencia (mesmo hex
+                   renderizado) de uma cor que ja esta - senao duas amostras identicas na tela com
+                   veredito diferente parecem um erro do sistema, quando na verdade sao tintas
+                   diferentes (CMYK vs RGB, por exemplo) que so por coincidencia se parecem. -->
+              <div class="note" id="pf-det-similar" style="display:none;padding:0 0 10px"></div>
 
               <div id="pf-picks-wrap" style="display:none">
                 <div class="pf-lab" data-i18n="opt.pf.replace.pick"></div>
@@ -2043,6 +2049,18 @@ function pfShowDetail(key, r){
   tag.className = 'pf-det-tag ' + (r.inPalette ? 'in' : 'out');
   tag.textContent = r.inPalette ? r.registeredAs : T('opt.pal.notregistered');
 
+  // "Por que essa cor tá fora se eu já cadastrei uma igualzinha?" — quando o hex bate com o de uma
+  // cor JÁ cadastrada mas o modelo é diferente (CMYK vs RGB, por exemplo), a aparência na tela é a
+  // mesma e o veredito é diferente por um motivo real, não por falha do sistema. Dizer isso aqui é
+  // mais barato do que deixar o operador achar que a paleta está quebrada.
+  var similarEl = document.getElementById('pf-det-similar');
+  if (!r.inPalette && r.similarTo) {
+    similarEl.textContent = T('opt.pf.colors.similarto', r.similarTo);
+    similarEl.style.display = '';
+  } else {
+    similarEl.style.display = 'none';
+  }
+
   renderPicks();
   document.getElementById('pf-target').value = '';
   document.getElementById('pf-det').classList.add('show');
@@ -2111,10 +2129,20 @@ function pfSetMode(m){
   t.setAttribute('placeholder', T(m === 'Cmyk' ? 'opt.pf.replace.cmykph' : 'opt.pf.replace.hexph'));
 }
 
+function pfDeny(el){
+  if (!el) return;
+  el.classList.remove('shake');
+  void el.offsetWidth;
+  el.classList.add('shake');
+  setTimeout(function(){ el.classList.remove('shake'); }, 400);
+}
+
 function pfReplace(){
-  if (busy || !pfSelKey) return;
-  var raw = (document.getElementById('pf-target').value || '').trim();
-  if (!raw) return;
+  if (busy) return;
+  var targetEl = document.getElementById('pf-target');
+  if (!pfSelKey){ pfDeny(targetEl); return; }
+  var raw = (targetEl.value || '').trim();
+  if (!raw){ pfDeny(targetEl); targetEl.focus(); return; }
 
   var scopeEl = document.querySelector('input[name="pf-scope"]:checked');
   var msg = { cmd:'colorReplace', sourceKey: pfSelKey, targetModel: pfMode,

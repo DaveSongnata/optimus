@@ -374,6 +374,7 @@ namespace Optimus.Core.I18n
             ["opt.pf.colors.partial"] = "Counting… the order can still change",
             ["opt.pf.colors.nousage"] = "Per-colour usage was not measured in this pass.",
             ["opt.pf.colors.unmeasured"] = "Colour read from the selected object — not yet measured in this analysis.",
+            ["opt.pf.colors.similarto"] = "Same look as \"{0}\" — but it is a different ink (a different colour model), so it still counts as outside the palette.",
             ["opt.pf.replace.pick"] = "Replace with a palette colour",
             ["opt.pf.replace.manual"] = "or type the value",
             ["opt.pf.replace.hexph"] = "RRGGBB",

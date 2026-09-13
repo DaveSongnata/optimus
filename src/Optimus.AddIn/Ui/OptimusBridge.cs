@@ -598,6 +598,11 @@ namespace Optimus.AddIn.Ui
             registeredAs = row.RegisteredAs,
             registeredPalette = row.RegisteredPalette,
             inPalette = row.InPalette,
+            // Only set when this colour is FORA DA PALETA and some registered colour renders as the
+            // exact same hex — "por que esse laranja tá fora se eu já cadastrei um laranja igual" is
+            // a real support question (measured 2026-09) whose answer is "modelo diferente, mesma
+            // aparência", not a bug. Never implies the two are interchangeable for print.
+            similarTo = row.SimilarTo,
         };
 
         /// <summary>
