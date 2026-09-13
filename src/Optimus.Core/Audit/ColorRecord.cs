@@ -58,8 +58,12 @@ namespace Optimus.Core.Audit
 
         public bool IsSpot => Model == ColorModel.Spot || SpotName.Length > 0;
 
-        /// <summary>Identity for de-duplication: same model + same value is the same colour.</summary>
-        public string Key => $"{Model}|{(SpotName.Length > 0 ? SpotName : Hex + Components)}";
+        /// <summary>
+        /// Identity for de-duplication: same model + same value is the same colour. The ONE formula,
+        /// shared with <c>PaletteColor.Key</c> via <see cref="ColorKeyFormat"/> — see its remarks for
+        /// why the hex comparison must be normalized rather than literal.
+        /// </summary>
+        public string Key => ColorKeyFormat.Build(Model, SpotName, Hex, Components);
     }
 
     /// <summary>

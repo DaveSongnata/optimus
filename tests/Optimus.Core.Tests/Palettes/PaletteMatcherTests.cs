@@ -103,5 +103,23 @@ namespace Optimus.Core.Tests.Palettes
 
             Assert.Single(PaletteMatcher.NotInAnyPalette(audit, registry));
         }
+
+        [Fact]
+        public void A_hash_prefixed_audited_hex_matches_a_palette_entry_typed_without_the_hash()
+        {
+            // Reported on a real file (2026-09): an operator converted a CMYK orange to RGB. The audit
+            // read it back as "#F58634" (Color.HexValue carries the '#'), while the Hewlla palette's
+            // own entry for the very same orange — typed by hand earlier — held "F58634" with none.
+            // Same six digits, same model, and the screen still said FORA DA PALETA because the two
+            // Key getters compared the strings literally instead of the colour values.
+            var audit = new ColorAudit();
+            audit.Add(new ColorRecord { Model = ColorModel.Rgb, Hex = "#F58634" });
+
+            PaletteRegistry registry = PaletteRegistry.InMemory();
+            registry.AddPalette("Hewlla");
+            registry.AddColor("Hewlla", new PaletteColor { Name = "laranja", Model = ColorModel.Rgb, Hex = "F58634" });
+
+            Assert.Empty(PaletteMatcher.NotInAnyPalette(audit, registry));
+        }
     }
 }

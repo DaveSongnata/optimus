@@ -51,11 +51,14 @@ namespace Optimus.Core.Palettes
         public string SpotName { get; set; } = "";
 
         /// <summary>
-        /// Identity for matching against an audited <see cref="Audit.ColorRecord"/>. MUST mirror
-        /// <c>ColorRecord.Key</c> exactly, or a palette colour would never match the same colour found
-        /// in the document.
+        /// Identity for matching against an audited <see cref="Audit.ColorRecord"/> — built by the
+        /// SAME shared formula (<see cref="Audit.ColorKeyFormat"/>), not a hand-copied twin of it.
+        /// Two independent expressions of "the same" key is exactly how a palette entry stored as
+        /// bare hex digits (typed by hand) stopped matching an audited colour whose
+        /// <c>Color.HexValue</c> carries a leading '#' — literally the same six digits, two different
+        /// key strings.
         /// </summary>
-        public string Key => $"{Model}|{(SpotName.Length > 0 ? SpotName : Hex + Components)}";
+        public string Key => Audit.ColorKeyFormat.Build(Model, SpotName, Hex, Components);
     }
 
     /// <summary>A named group of colours the shop has standardised on.</summary>

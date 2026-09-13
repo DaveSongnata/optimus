@@ -651,6 +651,19 @@ namespace Optimus.AddIn.Ui
             List<ColorTableRow> rows = PaletteMatcher.BuildTable(_lastColorAudit, _palettes);
             List<ColorRecord> alerts = PaletteMatcher.NotInAnyPalette(_lastColorAudit, _palettes);
 
+            // O que pareceu "impossível" numa tela (uma cor com o hex exato da paleta marcada como
+            // fora dela) some em cinco minutos quando as CHAVES aparecem lado a lado no log — sem
+            // isso, diagnosticar essa classe de bug exige recriar a sessão inteira e comparar prints.
+            // Só quando há paleta ativa E alguma cor ficou de fora: com paleta vazia "tudo fora" não é
+            // achado, é o esperado, e logar isso em todo audit encheria o log de ruído.
+            if (alerts.Count > 0 && _palettes.Active != null)
+            {
+                Dictionary<string, PaletteColor> registered = _palettes.ActiveColorsByKey();
+                OptimusLog.Write("PaletteMatch: ativa=\"" + _palettes.ActiveName + "\" "
+                    + "paletaChaves=[" + string.Join(", ", registered.Keys) + "] "
+                    + "foraDaPaleta=[" + string.Join(", ", alerts.ConvertAll(a => a.Key)) + "]");
+            }
+
             Post(new
             {
                 type = "colorTable",
