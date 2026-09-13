@@ -24,7 +24,7 @@ namespace Optimus.Core.Audit
         public static string Build(ColorModel model, string spotName, string hex, string components)
         {
             string identity = (spotName?.Length ?? 0) > 0
-                ? spotName!
+                ? NormalizeSpot(spotName!)
                 : NormalizeHex(hex) + (components ?? "");
             return $"{model}|{identity}";
         }
@@ -33,5 +33,16 @@ namespace Optimus.Core.Audit
         /// exact same colour value always produce the exact same key.</summary>
         public static string NormalizeHex(string? hex) =>
             (hex ?? "").Trim().TrimStart('#').ToUpperInvariant();
+
+        /// <summary>
+        /// Same reasoning as <see cref="NormalizeHex"/>, for the OTHER half of the key: every route
+        /// that copies a spot name into a palette (PaletteColorAdd, PaletteCapture) does so verbatim
+        /// from the exact same document reading, so this has not been observed to bite yet — but
+        /// PaletteRegistry's own lookups (<c>Dictionary&lt;string, PaletteColor&gt;</c> with no
+        /// comparer, <c>c.Key == color.Key</c>) are case-SENSITIVE, unlike <c>ColorAudit</c>'s
+        /// (<c>StringComparer.OrdinalIgnoreCase</c>). Normalizing case here, once, means neither side
+        /// has to agree on a comparer for the key to compare equal.
+        /// </summary>
+        public static string NormalizeSpot(string spotName) => spotName.Trim().ToUpperInvariant();
     }
 }

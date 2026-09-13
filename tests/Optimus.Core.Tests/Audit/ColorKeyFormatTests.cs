@@ -52,6 +52,20 @@ namespace Optimus.Core.Tests.Audit
         }
 
         [Fact]
+        public void Spot_name_case_does_not_change_the_key()
+        {
+            // Not yet observed on a real file — PaletteColorAdd/PaletteCapture always copy SpotName
+            // verbatim from the SAME document reading, so both sides agree today. But
+            // PaletteRegistry's own dictionaries and `==` checks are case-SENSITIVE (unlike
+            // ColorAudit's), so this is the same bug class waiting for a manually-typed spot name to
+            // trigger it. Normalizing here means no comparer choice can reopen it.
+            var audited = new ColorRecord { Model = ColorModel.Spot, SpotName = "PANTONE 172 C" };
+            var registered = new PaletteColor { Model = ColorModel.Spot, SpotName = "Pantone 172 C" };
+
+            Assert.Equal(audited.Key, registered.Key);
+        }
+
+        [Fact]
         public void A_different_colour_value_still_produces_a_different_key()
         {
             // Normalizing hex must not become a lenient match — a real difference still disagrees.
