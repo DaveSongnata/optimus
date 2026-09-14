@@ -3024,12 +3024,12 @@ function renderFonts(){
         // apareciam em Segoe UI, ou seja, a "prova visual" mostrava a fonte errada.
         // Agora os bytes vem do C# e a amostra e a fonte de verdade.
         var slug = fontSlug(f.name);
-        return '<div class="pf-font ' + cls + '" id="fo-' + slug + '">'
+        return '<div class="pf-font ' + cls + '">'
              + '<span class="fo-ic" aria-hidden="true">' + (SEV_GLYPH[cls] || '') + '</span>'
              + '<span class="fo-b">'
              + '<div class="fo-n">' + esc(f.name) + '</div>'
              + '<div class="fo-s">' + esc(f.summary || '') + '</div>'
-             + '<div class="fo-sp" id="sp-' + slug + '" aria-label="'
+             + '<div class="fo-sp" data-slug="' + slug + '" aria-label="'
                + esc(T('opt.pf.font.preview')) + '">' + esc(foSample()) + '</div>'
              + '</span></div>';
       }).join('');
@@ -3092,15 +3092,22 @@ function requestFontPreview(name){
 
 function showFontPreview(d){
   var slug = fontSlug(d.family);
-  var el = document.getElementById('sp-' + slug);
-  if (!el) return;
+  // querySelectorAll, não getElementById: a MESMA fonte pode aparecer em duas listas ao mesmo
+  // tempo (usada no arquivo E presente na pasta) — duas amostras, um pedido só (fontAsked já
+  // evita duplicar o pedido), e as duas precisam ganhar a fonte de verdade quando a resposta
+  // chega. Com getElementById só a primeira ocorrência no HTML era atualizada; a segunda ficava
+  // presa no estado invisível para sempre, mesmo com o pedido tendo sido respondido com sucesso.
+  var nodes = document.querySelectorAll('.fo-sp[data-slug="' + slug + '"]');
+  if (!nodes.length) return;
 
   if (!d.ok || !d.data){
     // Nao ter conseguido desenhar a fonte NAO e um problema com a fonte, e uma
     // limitacao nossa - entao a linha diz isso, em vez de sumir e dar a impressao
     // de que o veredito mudou.
-    el.classList.add('fail');
-    el.textContent = T('opt.pf.font.previewfail');
+    for (var i = 0; i < nodes.length; i++){
+      nodes[i].classList.add('fail');
+      nodes[i].textContent = T('opt.pf.font.previewfail');
+    }
     return;
   }
 
@@ -3116,8 +3123,10 @@ function showFontPreview(d){
     document.head.appendChild(css);
   }
 
-  el.style.fontFamily = '"' + face + '", serif';
-  el.classList.add('on');
+  for (var j = 0; j < nodes.length; j++){
+    nodes[j].style.fontFamily = '"' + face + '", serif';
+    nodes[j].classList.add('on');
+  }
 }
 
 // Pasta de fontes, no modelo do Corel Font Manager: as fontes ficam num diretorio e sao
@@ -3152,10 +3161,24 @@ function showFontFolder(d){
     + fonts.map(function(f){
         var cls = f.verdict === 'Failed' ? 'err' : f.verdict === 'Warning' ? 'warn'
                 : f.verdict === 'SymbolFont' ? 'sym' : 'ok';
+        // Antes o nome tentava se desenhar na PROPRIA fonte via font-family:"<nome>" — o mesmo
+        // truque que já tinha sido abandonado em "fontes do arquivo" por não funcionar (essas
+        // fontes normalmente NÃO estão instaladas no Windows, então caem sempre no fallback e
+        // mostram a fonte errada). Reaproveita a amostra de verdade (bytes lidos pelo C#), que já
+        // existia para "fontes do arquivo" — inclusive escreve o texto que o operador digitar em
+        // "Texto de amostra", que antes só valia para a lista pequena de fontes usadas no arquivo.
+        var slug = fontSlug(f.name);
         return '<div class="pf-font ' + cls + '"><span class="fo-ic" aria-hidden="true">' + (SEV_GLYPH[cls] || '') + '</span><span class="fo-b">'
-             + '<div class="fo-n" style="font-family:' + esc(JSON.stringify(String(f.name))) + '">' + esc(f.name) + '</div>'
-             + '<div class="fo-s">' + esc(f.summary || '') + '</div></span></div>';
+             + '<div class="fo-n">' + esc(f.name) + '</div>'
+             + '<div class="fo-s">' + esc(f.summary || '') + '</div>'
+             + '<div class="fo-sp" data-slug="' + slug + '" aria-label="'
+               + esc(T('opt.pf.font.preview')) + '">' + esc(foSample()) + '</div>'
+             + '</span></div>';
       }).join('');
+
+  // Mesmo cache de pedidos da lista de "fontes do arquivo" (fontAsked, por nome) — uma fonte que
+  // aparece nas duas listas ao mesmo tempo pede os bytes só uma vez.
+  fonts.forEach(function(f){ requestFontPreview(f.name); });
 }
 
 // ── abas ───────────────────────────────────────────────────
