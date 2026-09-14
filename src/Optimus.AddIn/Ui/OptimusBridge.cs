@@ -143,7 +143,16 @@ namespace Optimus.AddIn.Ui
                 // não encontrado" could show up on a machine where the model genuinely is present:
                 // the page's own boot-time voiceStatus request never got answered, so its local
                 // "model available" flag just stayed at its default false forever.
-                bool isStatusQuery = cmd == "status" || cmd == "voiceStatus";
+                // fontPreview joins this list for a different reason than the other two: it is pure
+                // disk I/O (FontFileLocator reading one font file), never touches COM/the STA thread,
+                // and never mutates any field this bridge keeps — so it has no reason to wait behind
+                // an audit. Reported on a real file (2026-09): "digito 'marcelo' no texto de amostra e
+                // não aparece". Root cause had nothing to do with the typed text — requestFontPreview()
+                // marks a font as "already asked" BEFORE sending, so the one request that landed
+                // during an audit's busy window got silently DROPPED and NEVER retried; that font's
+                // specimen (opacity:0 by default, only turned visible by the response this bridge
+                // never sent) stayed invisible for the rest of the session no matter what was typed.
+                bool isStatusQuery = cmd == "status" || cmd == "voiceStatus" || cmd == "fontPreview";
 
                 if (_running && !isStatusQuery)
                 {
