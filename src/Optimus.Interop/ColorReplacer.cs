@@ -43,8 +43,26 @@ namespace Optimus.Interop
         /// (fountain stops, pattern front/back) — counted honestly instead of silently skipped.</summary>
         public int NotReplaceable;
 
-        /// <summary>True when FindShapes came back empty and the hand-rolled walk took over (O23).</summary>
+        /// <summary>True when FindShapes came back empty and the hand-rolled walk took over (O23).
+        /// Kept for the "selecionado" path; the whole-page path always walks now (see O28) so this
+        /// stays true there for backward-compatible log parsing.</summary>
         public bool UsedFallbackWalk;
+
+        /// <summary>
+        /// How many shapes <c>Page.FindShapes(Recursive:=True)</c> reported, measured purely for the
+        /// log — never used to gather what gets visited. A non-zero, even LARGE count here does not
+        /// mean it saw everything: O28 measured 3014 shapes back from FindShapes on a real file while
+        /// the colour it was hunting for lived on a shape only reachable through a PowerClip, which
+        /// FindShapes silently never expands. Comparing this to ShapesInspected is what makes the next
+        /// docker.log self-diagnosing without another round of DevTools.
+        /// </summary>
+        public int ShapesViaFindShapes;
+
+        /// <summary>Of ShapesInspected, how many were reached ONLY because a PowerClip was opened —
+        /// i.e. shapes FindShapes' own recursion does not reach (O28). Zero here despite a colour
+        /// being provably present (confirmed by the audit) points away from the PowerClip theory and
+        /// at something else — a mesh/bitmap fill, or a key-format mismatch (O27).</summary>
+        public int ShapesViaPowerClip;
 
         /// <summary>Group containers traversed but never written to — writing a group's fill cascades (O24).</summary>
         public int GroupsSkipped;
@@ -120,22 +138,43 @@ namespace Optimus.Interop
                     ReplaceOnShape(shape, request.SourceKey, targetColor, request.FillOnly, result);
                 }
 
-                // ROTA 1 — rápida.
-                object? found = FindScope(app, doc, request.SelectionOnly, result);
-                int viaFind = RunOverRange(found, Visit, result);
-
-                // Selection-only with nothing selected produces the SAME zeros as "that colour is not
-                // in this file". Recording which one it was is what lets the screen say the useful
-                // sentence instead of the generic one.
-                if (viaFind == 0 && request.SelectionOnly && result.FirstError.Length == 0)
-                    result.SelectionEmpty = true;
-
-                // ROTA 2 — a que salva o dia neste arquivo. Medido em x2.cdr: FindShapes devolveu
-                // ZERO formas enquanto Page.Shapes tinha 100. Sem esta rota o substituidor percorria
-                // nada e devolvia "0 trocas", que é indistinguível de "essa cor não existe aqui".
-                if (viaFind == 0 && !request.SelectionOnly)
+                if (request.SelectionOnly)
                 {
+                    object? found = FindScope(app, doc, true, result);
+                    int viaFind = RunOverRange(found, Visit, result);
+
+                    // Selection-only with nothing selected produces the SAME zeros as "that colour is
+                    // not in this file". Recording which one it was is what lets the screen say the
+                    // useful sentence instead of the generic one.
+                    if (viaFind == 0 && result.FirstError.Length == 0)
+                        result.SelectionEmpty = true;
+                }
+                else
+                {
+                    // O28 — "todas as cores" NUNCA percorre via FindShapes. Medido num arquivo real:
+                    // FindShapes(Recursive:=True) devolveu 3014 formas (não zero — a antiga rota de
+                    // fallback abaixo só disparava com ZERO, então nunca disparou aqui) e mesmo assim
+                    // nunca visitou a forma com a cor que a auditoria (Document.Palette, leitura nativa
+                    // do Corel) via sem problema nenhum. A cor estava dentro de um PowerClip, que
+                    // FindShapes não é garantido descer (regra já documentada no CLAUDE.md). O25 diz
+                    // que uma correção de travessia vale para TODOS os caminhos — então "todas as
+                    // cores" usa sempre o mesmo passeio manual que já é comprovadamente completo
+                    // (grupos + PowerClip), e o FindShapes vira só uma sonda para o log poder PROVAR a
+                    // divergência entre "quantas formas o Corel diz que há" e "quantas foram
+                    // realmente visitadas" — sem isso, um segundo relatório insuficiente exigiria mais
+                    // uma rodada de DevTools em vez de já sair diagnosticável do próximo docker.log.
                     result.UsedFallbackWalk = true;
+                    try
+                    {
+                        object? probe = doc.ActivePage.FindShapes(Type.Missing, Type.Missing, true);
+                        if (probe != null)
+                        {
+                            try { result.ShapesViaFindShapes = (int)((dynamic)probe).Count; } catch { }
+                            Release(probe);
+                        }
+                    }
+                    catch (Exception ex) { Note(result, ex); }
+
                     object? page = null;
                     try { page = doc.ActivePage; }
                     catch (Exception ex) { Note(result, ex); }
@@ -219,7 +258,15 @@ namespace Optimus.Interop
                     {
                         object? pcShapes = null;
                         try { pcShapes = ((dynamic)pc).Shapes; } catch { }
-                        if (pcShapes != null) { WalkShapes(pcShapes, visit, result, depth + 1); Release(pcShapes); }
+                        if (pcShapes != null)
+                        {
+                            // Envolve o visit para contar tudo que só existe porque abrimos este
+                            // PowerClip — inclusive filhos de grupos dentro dele, já que a recursão
+                            // de WalkShapes propaga este MESMO delegate para dentro.
+                            void VisitInPowerClip(object s) { result.ShapesViaPowerClip++; visit(s); }
+                            WalkShapes(pcShapes, VisitInPowerClip, result, depth + 1);
+                            Release(pcShapes);
+                        }
                         Release(pc);
                     }
                 }

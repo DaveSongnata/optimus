@@ -1094,7 +1094,8 @@ OptimusLog.Write($"ConvertColors: alvo={(toCmyk ? "CMYK" : "RGB")} " +
                     $"preench={result.FillsChanged} contornos={result.OutlinesChanged} " +
                     $"naoSubstituivel={result.NotReplaceable} gruposPulados={result.GroupsSkipped} " +
                     $"rotaAlternativa={result.UsedFallbackWalk} somenteSelecao={request.SelectionOnly} " +
-                    $"soPreenchimento={request.FillOnly} selecaoVazia={result.SelectionEmpty}" +
+                    $"soPreenchimento={request.FillOnly} selecaoVazia={result.SelectionEmpty} " +
+                    $"viaFindShapes={result.ShapesViaFindShapes} viaPowerClip={result.ShapesViaPowerClip}" +
                     (result.FirstError.Length > 0 ? " primeiroErro=" + result.FirstError : ""));
 
                 // Percorreu formas e não casou NADA: essa combinação é sempre ou "a cor não está
