@@ -1826,7 +1826,21 @@ OptimusLog.Write($"ConvertColors: alvo={(toCmyk ? "CMYK" : "RGB")} " +
             // PostWebMessageAsJson: inside a CorelDRAW addon docker (foreign WPF host) the
             // 'message' channel is unreliable (foreign Dispatcher + listener-registration race —
             // JS→C# works, C#→JS silently drops). Calling a global JS function bypasses it.
-            string json = JsonSerializer.Serialize(message);
+            //
+            // Serialization used to sit OUTSIDE any try/catch here. Measured on a real client
+            // machine (2026-09): a sibling AiSten addin sharing the same CorelDRAW process had
+            // loaded a different version of System.Text.Json into the AppDomain, and
+            // JsonSerializer.Serialize threw a TypeLoadException that escaped this method
+            // entirely — unwinding straight through whichever command called Post(), which meant
+            // that command's own `finally { _running = false; }` never got a chance to run for
+            // every command still ahead of it in that call chain. The docker was left "busy"
+            // forever; every command after that read as DROPPED (busy) until CorelDRAW was
+            // restarted. A message that cannot be serialized must cost this ONE post, never the
+            // whole session.
+            string json;
+            try { json = JsonSerializer.Serialize(message); }
+            catch (Exception ex) { OptimusLog.Write("Post: falha ao serializar mensagem: " + ex); return; }
+
             string script = "if(window.optimusReceive){window.optimusReceive(" + json + ");}";
             _runOnUi(() =>
             {

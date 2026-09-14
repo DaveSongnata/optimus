@@ -19,13 +19,28 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-    <PackageReference Include="System.Text.Json" Version="10.0.2" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
     <!-- Voice command (F11): fully offline speech-to-text. whisper.cpp via Whisper.net, CPU-only
          runtime (no CUDA/GPU assumption on a demo laptop), mic capture via NAudio. No cloud API, no
          key, no network at runtime — replaces an earlier OpenAI-Whisper design Davi explicitly
-         rejected (2026-08-14): "eu quero que funcione offline... não é para usar API". -->
-    <PackageReference Include="Whisper.net" Version="1.9.1" />
-    <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
+         rejected (2026-08-14): "eu quero que funcione offline... não é para usar API".
+
+         PINNED at 1.7.4 — do NOT bump without re-reading this note. 1.9.1 pulls in
+         Microsoft.Extensions.AI.Abstractions, which forces System.Text.Json to >= 10.0.2. That
+         version mismatch crashed a REAL client machine (2026-09): "TypeLoadException: Método
+         DisposeAsync no tipo System.Text.Json.Utf8JsonWriter ... não tem uma implementação",
+         thrown from inside OptimusBridge.Post — every single message the docker sends to the
+         page, on every command. The client's CorelDRAW process also runs a SIBLING AiSten addin
+         (MantosExtract) that loads its own System.Text.Json copy into the SAME process; two
+         different versions of the same assembly identity colliding in one AppDomain is exactly
+         the kind of thing net48's loose-DLL-per-addon deployment (O: "No ILRepack: every managed
+         dep ships loose") cannot isolate. Reproduced on Davi's own machine only because it does
+         NOT have MantosExtract installed — "funciona na minha, não na do cliente" was the tell.
+         A newer ggml model does not need the newer whisper.cpp: the model format self-describes
+         its architecture (layer counts etc.), so 1.7.4 loads a distilled/fine-tuned model file
+         exactly as well as 1.9.1 would. -->
+    <PackageReference Include="Whisper.net" Version="1.7.4" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.7.4" />
     <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
 

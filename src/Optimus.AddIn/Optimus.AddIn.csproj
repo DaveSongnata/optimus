@@ -28,7 +28,7 @@
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
     <!-- WebView2 hosts the operator UI (Ui/OptimusDocker.cs) in-process inside CorelDRAW. -->
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
-    <PackageReference Include="System.Text.Json" Version="10.0.2" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
 
   <!-- Layers: Core is pure (testable on net8.0), Interop owns every CorelDRAW COM call. -->
