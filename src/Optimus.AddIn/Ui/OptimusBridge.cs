@@ -222,6 +222,8 @@ namespace Optimus.AddIn.Ui
                     case "voiceStart": VoiceStart(); break;
                     case "voiceStop": RunVoiceStop(); break;
                     case "voiceStatus": PostVoiceStatus(); break;
+                    case "voiceDeviceList": PostVoiceDevices(); break;
+                    case "voiceDeviceSet": VoiceDeviceSet(json); break;
                 }
             }
             catch (Exception ex) { OptimusLog.Write("OnWebMessage UNHANDLED: " + ex); }
@@ -1498,7 +1500,8 @@ OptimusLog.Write($"ConvertColors: alvo={(toCmyk ? "CMYK" : "RGB")} " +
         {
             try
             {
-                _voiceRecorder.Start();
+                int deviceIndex = VoiceRecorder.ResolveDeviceIndex(VoiceDeviceStore.Read());
+                _voiceRecorder.Start(deviceIndex);
                 Post(new { type = "voiceRecording", ok = true, recording = true });
                 _voicePlayer.Play("ready");
             }
@@ -1507,6 +1510,31 @@ OptimusLog.Write($"ConvertColors: alvo={(toCmyk ? "CMYK" : "RGB")} " +
                 OptimusLog.Write("VoiceStart FAILED: " + ex.Message);
                 Post(new { type = "voiceResult", ok = false, error = ex.Message });
             }
+        }
+
+        /// <summary>
+        /// Lists every recording device Windows currently sees, plus which one is saved as the
+        /// operator's choice — so the settings screen can render a picker instead of leaving the
+        /// microphone stuck on whatever Windows calls "default" (measured: a shop with a USB headset
+        /// AND a built-in laptop mic has no other way to pick between them).
+        /// </summary>
+        private void PostVoiceDevices()
+        {
+            string saved = VoiceDeviceStore.Read();
+            Post(new
+            {
+                type = "voiceDevices",
+                devices = VoiceRecorder.ListDevices().ConvertAll(d => new { index = d.Index, name = d.Name }),
+                selected = saved,
+            });
+        }
+
+        private void VoiceDeviceSet(string json)
+        {
+            string name = ReadStr(json, "name");
+            VoiceDeviceStore.Write(name);
+            OptimusLog.Write("Voz: microfone escolhido = \"" + (name.Length > 0 ? name : "(padrão do sistema)") + "\"");
+            PostVoiceDevices();
         }
 
         /// <summary>Maps a matched command to the fixed WAV key that confirms it — see

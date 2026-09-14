@@ -19,13 +19,13 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference Include="System.Text.Json" Version="10.0.2" />
     <!-- Voice command (F11): fully offline speech-to-text. whisper.cpp via Whisper.net, CPU-only
          runtime (no CUDA/GPU assumption on a demo laptop), mic capture via NAudio. No cloud API, no
          key, no network at runtime — replaces an earlier OpenAI-Whisper design Davi explicitly
          rejected (2026-08-14): "eu quero que funcione offline... não é para usar API". -->
-    <PackageReference Include="Whisper.net" Version="1.7.4" />
-    <PackageReference Include="Whisper.net.Runtime" Version="1.7.4" />
+    <PackageReference Include="Whisper.net" Version="1.9.1" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
     <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
 

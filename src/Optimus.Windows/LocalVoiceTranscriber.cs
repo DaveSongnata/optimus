@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Optimus.Core.Voice;
 using Whisper.net;
 
 namespace Optimus.Windows
@@ -64,11 +65,24 @@ namespace Optimus.Windows
             {
                 _factory ??= WhisperFactory.FromPath(_modelPath);
 
+                // Silence at either end is whisper.cpp's own documented hallucination trigger
+                // (ggml-org/whisper.cpp#1724) — Optimus records from "start" click to "stop" click
+                // with no trimming, so this runs before the model ever sees the clip. A quiet mic also
+                // reads as "weak evidence" to the decoder, hence the peak boost alongside the trim.
+                byte[] prepared = AudioPreprocessor.TrimAndNormalize(wavBytes);
+
                 using WhisperProcessor processor = _factory.CreateBuilder()
                     .WithLanguage(string.IsNullOrWhiteSpace(language) ? "auto" : language)
+                    // The three anti-hallucination knobs whisper.cpp exposes but Whisper.net does not
+                    // default on — their absence is called out by name in a real dictation app's own
+                    // bug tracker (Envious-Labs-LLC/enviouswispr-windows#101) as the reason it invented
+                    // filler text on quiet audio. Values match whisper.cpp's own CLI defaults.
+                    .WithNoSpeechThreshold(0.6f)
+                    .WithLogProbThreshold(-1.0f)
+                    .WithEntropyThreshold(2.4f)
                     .Build();
 
-                using var audio = new MemoryStream(wavBytes);
+                using var audio = new MemoryStream(prepared);
                 var sb = new StringBuilder();
                 await foreach (SegmentData segment in processor.ProcessAsync(audio))
                     sb.Append(segment.Text);

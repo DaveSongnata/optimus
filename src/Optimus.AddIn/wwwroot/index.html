@@ -285,6 +285,9 @@ body:has(.modal:not([hidden])) .voice-fab{display:none}
 .obj-badge.light{background:var(--ok-soft);color:var(--ok)}
 .obj-badge.heavy{background:var(--brand-soft2);color:var(--brand)}
 .obj-note{font-size:var(--f-sm);line-height:1.45;color:var(--ink-45)}
+.voice-cmd-list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.voice-cmd-list li{font-size:var(--f-sm);line-height:1.4;color:var(--ink-70)}
+.voice-cmd-list b{color:var(--ink);font-family:var(--font-mono);font-weight:700}
 /* composition bars: one row per component, width = share of the file */
 .bars{display:flex;flex-direction:column;gap:3px;margin-bottom:7px}
 .bar{display:flex;align-items:center;gap:7px}
@@ -1341,6 +1344,18 @@ body:has(.modal:not([hidden])) .voice-fab{display:none}
     <div class="voice-transcript" id="voice-transcript"></div>
     <div class="voice-action" id="voice-action"></div>
     <div class="obj-note" data-i18n="opt.voice.offlinehint" style="padding:9px 12px 11px;border-top:1px solid var(--line-2)"></div>
+
+    <!-- Comandos disponiveis: a pergunta mais obvia de quem nunca usou o microfone e "o que eu posso falar". -->
+    <details class="disclose" style="padding:0 12px 11px">
+      <summary data-i18n="opt.voice.commands.title"></summary>
+      <ul class="voice-cmd-list" id="voice-cmd-list"></ul>
+    </details>
+
+    <!-- Escolha de microfone: hoje nao ha forma de dizer qual mic usar quando a maquina tem mais de um. -->
+    <details class="disclose" style="padding:0 12px 11px" ontoggle="if(this.open) voiceDevicesOpen()">
+      <summary data-i18n="opt.voice.mic.title"></summary>
+      <select id="voice-device-select" class="field" onchange="voiceDeviceChanged()"></select>
+    </details>
   </div>
 </div>
 
@@ -3651,8 +3666,55 @@ var voiceRecording = false;
 
 function voiceFab(){ return document.getElementById('voice-fab'); }
 function voiceDot(){ return document.getElementById('voice-dot'); }
-function openVoicePanel(){ document.getElementById('voice-panel').classList.add('show'); }
+function openVoicePanel(){
+  document.getElementById('voice-panel').classList.add('show');
+  renderVoiceCommands();
+}
 function closeVoicePanel(){ document.getElementById('voice-panel').classList.remove('show'); }
+
+// Conteúdo estático (não depende de nenhum dado do host) — uma vez já basta; renderizar de novo a
+// cada abertura do painel só piscaria a lista sem mudar nada nela.
+function renderVoiceCommands(){
+  var list = document.getElementById('voice-cmd-list');
+  if (!list || list.childElementCount) return;
+  var keys = ['opt.voice.cmd.optimize', 'opt.voice.cmd.audit', 'opt.voice.cmd.analyze', 'opt.voice.cmd.lang'];
+  list.innerHTML = keys.map(function(k){ return '<li>' + esc(T(k)) + '</li>'; }).join('');
+}
+
+// ── microfone: qual dispositivo gravar (F11) ─────────────────────────────────
+// Enumerado só quando o disclosure abre pela primeira vez — perguntar ao host toda vez que o
+// painel de voz aparece custaria uma chamada COM/NAudio por nada quando ninguém vai trocar de mic.
+var voiceDevicesLoaded = false;
+function voiceDevicesOpen(){
+  if (voiceDevicesLoaded) return;
+  voiceDevicesLoaded = true;
+  send({ cmd:'voiceDeviceList' });
+}
+
+function showVoiceDevices(d){
+  var sel = document.getElementById('voice-device-select');
+  if (!sel) return;
+  var devices = d.devices || [];
+
+  if (devices.length === 0){
+    sel.innerHTML = '<option value="">' + esc(T('opt.voice.mic.none')) + '</option>';
+    sel.disabled = true;
+    return;
+  }
+
+  sel.disabled = false;
+  var defaultOn = !d.selected ? ' selected' : '';
+  sel.innerHTML = '<option value=""' + defaultOn + '>' + esc(T('opt.voice.mic.default')) + '</option>'
+    + devices.map(function(dev){
+        var on = dev.name === d.selected ? ' selected' : '';
+        return '<option value="' + esc(dev.name) + '"' + on + '>' + esc(dev.name) + '</option>';
+      }).join('');
+}
+
+function voiceDeviceChanged(){
+  var sel = document.getElementById('voice-device-select');
+  if (sel) send({ cmd:'voiceDeviceSet', name: sel.value });
+}
 
 // The FAB and the panel's header dot always agree — one state, shown twice, so the operator
 // reads it the same way whether their eyes are on the button or on the panel that just opened.
