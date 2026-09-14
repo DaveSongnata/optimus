@@ -663,10 +663,18 @@ namespace Optimus.AddIn.Ui
             // achado, é o esperado, e logar isso em todo audit encheria o log de ruído.
             if (alerts.Count > 0 && _palettes.Active != null)
             {
-                Dictionary<string, PaletteColor> registered = _palettes.ActiveColorsByKey();
+                // Raw hex/RGB alongside the (already normalized) key: if a mismatch survives every
+                // normalization this file knows about, the raw values are what tells us WHAT to
+                // normalize next — measured need, not speculative logging (2026-09, "não entendi, ele
+                // considera RGB e a gente lê RGB também" — the key strings alone couldn't answer that).
+                List<string> paletteDetail = _palettes.Active.Colors
+                    .ConvertAll(c => c.Key + "(hexBruto=" + c.Hex + ")");
+                List<string> alertDetail = alerts.ConvertAll(a =>
+                    a.Key + "(hexBruto=" + a.Hex + (a.RgbKnown ? ",rgb=" + string.Join(",", a.Rgb) : "") + ")");
+
                 OptimusLog.Write("PaletteMatch: ativa=\"" + _palettes.ActiveName + "\" "
-                    + "paletaChaves=[" + string.Join(", ", registered.Keys) + "] "
-                    + "foraDaPaleta=[" + string.Join(", ", alerts.ConvertAll(a => a.Key)) + "]");
+                    + "paletaChaves=[" + string.Join(", ", paletteDetail) + "] "
+                    + "foraDaPaleta=[" + string.Join(", ", alertDetail) + "]");
             }
 
             Post(new

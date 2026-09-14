@@ -19,15 +19,27 @@ namespace Optimus.Core.Palettes
         public bool InPalette => RegisteredAs.Length > 0;
 
         /// <summary>
-        /// Name of a DIFFERENT registered colour that renders as the exact same hex — set only when
-        /// this colour is NOT itself registered. Real-file case: a CMYK ink (say C0 M60 Y100 K0) and
-        /// an RGB screen colour the shop already registered both read back the identical
-        /// <c>Color.HexValue</c> ("F58634"), because that field expresses the RGB-ish rendering
-        /// regardless of the underlying model (O19). They are genuinely different keys — a CMYK recipe
-        /// and an RGB value are different colour specifications, same reasoning as O27's "chapa vs
-        /// rico" — but an operator staring at two identical-looking swatches, one flagged registered
-        /// and the other not, has no way to tell that apart from the swatch alone. This is that
-        /// explanation, not a merge: the colour still shows FORA DA PALETA, just with a reason.
+        /// Name of a DIFFERENT registered colour this one is visually indistinguishable from — set
+        /// only when this colour is NOT itself registered. This does not merge or relax matching: the
+        /// colour still shows FORA DA PALETA, it just says why instead of leaving the operator to
+        /// conclude the palette check is broken. Two real-file causes, both covered:
+        ///
+        /// <para>
+        /// (a) SAME rendered hex, different model — a CMYK ink (say C0 M60 Y100 K0) and an RGB screen
+        /// colour both read back the identical <c>Color.HexValue</c> ("F58634"), because that field
+        /// expresses the RGB-ish rendering regardless of the underlying model (O19). Genuinely
+        /// different keys — a CMYK recipe and an RGB value are different colour specifications, same
+        /// reasoning as O27's "chapa vs rico".
+        /// </para>
+        /// <para>
+        /// (b) NEAR-identical numeric RGB after a mode conversion — measured on a real file: converting
+        /// a CMYK orange to RGB via "Converter cores" did not reproduce the exact byte-for-byte RGB
+        /// already registered for that same colour (CorelDRAW's quick preview hex and its actual
+        /// colour-managed CMYK→RGB conversion don't necessarily agree to the last unit). The two swatches
+        /// are pixel-identical to the eye and a few units apart numerically — comparing the (undocumented,
+        /// per O19) hex STRING literally misses this, so the check compares the reliable NUMERIC RGB
+        /// reading instead, within a small tolerance.
+        /// </para>
         /// </summary>
         public string SimilarTo { get; set; } = "";
     }
@@ -39,13 +51,18 @@ namespace Optimus.Core.Palettes
     /// </summary>
     public static class PaletteMatcher
     {
+        /// <summary>How far apart two RGB channels may be and still count as the same colour to the
+        /// eye. 3 out of 255 catches rounding drift from a colour-mode conversion (measured cause)
+        /// without risking a false "same colour" on two shades a designer chose on purpose.</summary>
+        private const int NearMatchMaxChannelDelta = 3;
+
         public static List<ColorTableRow> BuildTable(ColorAudit audit, PaletteRegistry registry)
         {
             var rows = new List<ColorTableRow>();
             if (audit == null) return rows;
 
             Dictionary<string, PaletteColor> registered = registry?.ActiveColorsByKey() ?? new Dictionary<string, PaletteColor>();
-            Dictionary<string, PaletteColor> registeredByHex = ActiveColorsByHex(registry);
+            List<PaletteColor> activeColors = registry?.Active?.Colors ?? new List<PaletteColor>();
             int total = audit.Unique.Sum(c => audit.TimesUsed(c));
 
             foreach (ColorRecord color in audit.Unique.OrderByDescending(c => audit.TimesUsed(c)))
@@ -63,9 +80,10 @@ namespace Optimus.Core.Palettes
                     row.RegisteredAs = match!.Name;
                     row.RegisteredPalette = OwningPaletteName(registry!, match);
                 }
-                else if (registeredByHex.TryGetValue(ColorKeyFormat.NormalizeHex(color.Hex), out PaletteColor? similar))
+                else
                 {
-                    row.SimilarTo = similar!.Name;
+                    PaletteColor? similar = FindVisuallySimilar(activeColors, color);
+                    if (similar != null) row.SimilarTo = similar.Name;
                 }
 
                 rows.Add(row);
@@ -74,20 +92,42 @@ namespace Optimus.Core.Palettes
             return rows;
         }
 
-        /// <summary>Active palette's colours keyed by rendered hex alone (model/components ignored) —
-        /// used ONLY to explain a FORA DA PALETA colour, never to decide whether one is registered.</summary>
-        private static Dictionary<string, PaletteColor> ActiveColorsByHex(PaletteRegistry? registry)
+        /// <summary>
+        /// A registered colour that LOOKS like <paramref name="color"/> even though its key doesn't
+        /// match — checked two ways, exact hex string first (cheap, catches the CMYK/RGB same-render
+        /// case), then numeric RGB proximity (catches conversion rounding drift; see
+        /// <see cref="ColorTableRow.SimilarTo"/>'s remarks for both real-file cases).
+        /// </summary>
+        private static PaletteColor? FindVisuallySimilar(List<PaletteColor> activeColors, ColorRecord color)
         {
-            var map = new Dictionary<string, PaletteColor>();
-            ColorPalette? active = registry?.Active;
-            if (active == null) return map;
+            string hex = ColorKeyFormat.NormalizeHex(color.Hex);
+            foreach (PaletteColor candidate in activeColors)
+                if (hex.Length > 0 && hex == ColorKeyFormat.NormalizeHex(candidate.Hex)) return candidate;
 
-            foreach (PaletteColor color in active.Colors)
+            if (!color.RgbKnown || color.Rgb == null || color.Rgb.Length != 3) return null;
+            foreach (PaletteColor candidate in activeColors)
+                if (TryParseHexRgb(candidate.Hex, out int r, out int g, out int b)
+                    && Math.Abs(color.Rgb[0] - r) <= NearMatchMaxChannelDelta
+                    && Math.Abs(color.Rgb[1] - g) <= NearMatchMaxChannelDelta
+                    && Math.Abs(color.Rgb[2] - b) <= NearMatchMaxChannelDelta)
+                    return candidate;
+
+            return null;
+        }
+
+        private static bool TryParseHexRgb(string hex, out int r, out int g, out int b)
+        {
+            r = g = b = 0;
+            string digits = ColorKeyFormat.NormalizeHex(hex);
+            if (digits.Length != 6) return false;
+            try
             {
-                string hex = ColorKeyFormat.NormalizeHex(color.Hex);
-                if (hex.Length > 0 && !map.ContainsKey(hex)) map[hex] = color;
+                r = Convert.ToInt32(digits.Substring(0, 2), 16);
+                g = Convert.ToInt32(digits.Substring(2, 2), 16);
+                b = Convert.ToInt32(digits.Substring(4, 2), 16);
+                return true;
             }
-            return map;
+            catch (Exception) { return false; }
         }
 
         /// <summary>Colours used in the file that are NOT part of any registered palette — the alert.</summary>

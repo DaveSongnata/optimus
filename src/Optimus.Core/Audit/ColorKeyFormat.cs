@@ -1,3 +1,5 @@
+using System;
+
 namespace Optimus.Core.Audit
 {
     /// <summary>
@@ -29,10 +31,24 @@ namespace Optimus.Core.Audit
             return $"{model}|{identity}";
         }
 
-        /// <summary>Strips the optional leading '#' and forces upper-case, so two spellings of the
-        /// exact same colour value always produce the exact same key.</summary>
-        public static string NormalizeHex(string? hex) =>
-            (hex ?? "").Trim().TrimStart('#').ToUpperInvariant();
+        /// <summary>
+        /// Strips everything that isn't a hex digit and forces upper-case, so two spellings of the
+        /// exact same colour value always produce the exact same key. Also drops a trailing alpha
+        /// pair (RRGGBBAA, 8 digits) — the same rule <c>hexClean()</c> already uses on the JS side for
+        /// the colour picker's own output, because ink has no transparency and a stray alpha suffix
+        /// would otherwise make an opaque colour fail to match itself.
+        /// </summary>
+        public static string NormalizeHex(string? hex)
+        {
+            var digitsBuilder = new System.Text.StringBuilder();
+            foreach (char c in (hex ?? "").Trim())
+                if (Uri.IsHexDigit(c)) digitsBuilder.Append(char.ToUpperInvariant(c));
+
+            string digits = digitsBuilder.ToString();
+            if (digits.Length == 8) return digits.Substring(0, 6);       // RRGGBBAA — alpha trails
+            if (digits.Length > 6) return digits.Substring(digits.Length - 6);
+            return digits;
+        }
 
         /// <summary>
         /// Same reasoning as <see cref="NormalizeHex"/>, for the OTHER half of the key: every route

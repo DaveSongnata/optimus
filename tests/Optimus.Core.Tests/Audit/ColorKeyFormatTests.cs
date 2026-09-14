@@ -74,5 +74,21 @@ namespace Optimus.Core.Tests.Audit
 
             Assert.NotEqual(audited.Key, registered.Key);
         }
+
+        [Fact]
+        public void An_eight_digit_hex_drops_its_trailing_alpha_pair()
+        {
+            // Same rule the JS colour picker's own hexClean() already applies to ITS output — ink has
+            // no transparency, and without this an opaque colour whose reader appended "FF" would
+            // fail to match itself.
+            Assert.Equal("F58634", ColorKeyFormat.NormalizeHex("F58634FF"));
+            Assert.Equal("F58634", ColorKeyFormat.NormalizeHex("#F58634FF"));
+        }
+
+        [Fact]
+        public void NormalizeHex_strips_any_non_hex_character_not_just_a_leading_hash()
+        {
+            Assert.Equal("F58634", ColorKeyFormat.NormalizeHex(" #F5-86.34 "));
+        }
     }
 }

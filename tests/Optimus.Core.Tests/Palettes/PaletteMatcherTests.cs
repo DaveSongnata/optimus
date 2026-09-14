@@ -179,5 +179,54 @@ namespace Optimus.Core.Tests.Palettes
             Assert.False(rows[0].InPalette);
             Assert.Equal("", rows[0].SimilarTo);
         }
+
+        [Fact]
+        public void A_colour_a_few_rgb_units_off_after_a_mode_conversion_is_flagged_with_SimilarTo()
+        {
+            // Reported on a real file (2026-09): converting a CMYK orange to RGB via "Converter
+            // cores" did not reproduce the exact registered "F58634" byte-for-byte — CorelDRAW's quick
+            // preview hex and its actual colour-managed conversion don't necessarily agree to the last
+            // unit. Pixel-identical to the eye, a couple of units apart numerically; the hex STRINGS
+            // genuinely differ here (that's the point), so only the numeric RGB reading catches it.
+            var audit = new ColorAudit();
+            audit.Add(new ColorRecord
+            {
+                Model = ColorModel.Rgb,
+                Hex = "F48533",
+                Rgb = new[] { 244, 134, 51 },
+                RgbKnown = true,
+            });
+
+            PaletteRegistry registry = PaletteRegistry.InMemory();
+            registry.AddPalette("Hewlla");
+            registry.AddColor("Hewlla", new PaletteColor { Name = "laranja", Model = ColorModel.Rgb, Hex = "F58634" }); // 245,134,52
+
+            List<ColorTableRow> rows = PaletteMatcher.BuildTable(audit, registry);
+
+            Assert.False(rows[0].InPalette);
+            Assert.Equal("laranja", rows[0].SimilarTo);
+        }
+
+        [Fact]
+        public void A_colour_too_far_in_rgb_terms_gets_no_SimilarTo_hint()
+        {
+            var audit = new ColorAudit();
+            audit.Add(new ColorRecord
+            {
+                Model = ColorModel.Rgb,
+                Hex = "E0862E",
+                Rgb = new[] { 224, 134, 46 }, // 21/0/6 units off — a real, visible difference
+                RgbKnown = true,
+            });
+
+            PaletteRegistry registry = PaletteRegistry.InMemory();
+            registry.AddPalette("Hewlla");
+            registry.AddColor("Hewlla", new PaletteColor { Name = "laranja", Model = ColorModel.Rgb, Hex = "F58634" });
+
+            List<ColorTableRow> rows = PaletteMatcher.BuildTable(audit, registry);
+
+            Assert.False(rows[0].InPalette);
+            Assert.Equal("", rows[0].SimilarTo);
+        }
     }
 }
