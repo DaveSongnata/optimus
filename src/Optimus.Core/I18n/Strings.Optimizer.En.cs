@@ -353,6 +353,8 @@ namespace Optimus.Core.I18n
             ["opt.pf.f.ok.fonts.d"] = "All {0} font(s) are installed and set Portuguese correctly.",
             ["opt.pf.f.ok.colors.t"] = "Consistent colour space",
             ["opt.pf.f.ok.colors.d"] = "The drawing does not mix RGB with CMYK.",
+            ["opt.pf.finds.summary.problems"] = "{0} finding(s) to review",
+            ["opt.pf.finds.summary.ok"] = "{0} finding(s) — all clear",
             ["opt.pf.f.notext.t"] = "No text in this file",
             ["opt.pf.f.notext.d"] = "There is nothing to check on fonts — everything is already curves or images.",
             ["opt.pf.show"] = "Show the colours",

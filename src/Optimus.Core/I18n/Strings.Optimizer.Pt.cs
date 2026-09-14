@@ -378,6 +378,8 @@ namespace Optimus.Core.I18n
             ["opt.pf.f.ok.fonts.d"] = "Todas as {0} fonte(s) estão instaladas e escrevem português corretamente.",
             ["opt.pf.f.ok.colors.t"] = "Espaço de cor consistente",
             ["opt.pf.f.ok.colors.d"] = "O desenho não mistura RGB com CMYK.",
+            ["opt.pf.finds.summary.problems"] = "{0} achado(s) para revisar",
+            ["opt.pf.finds.summary.ok"] = "{0} achado(s) — tudo certo",
             ["opt.pf.f.notext.t"] = "Nenhum texto neste arquivo",
             ["opt.pf.f.notext.d"] = "Não há o que conferir em fonte — tudo já está em curvas ou é imagem.",
             ["opt.pf.show"] = "Ver as cores",

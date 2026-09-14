@@ -618,6 +618,15 @@ body:has(.modal:not([hidden])) .voice-fab{display:none}
 /* One finding = one consequence, stated in print terms. */
 .pf-finds{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);
   border-radius:12px;box-shadow:var(--sh-card);overflow:hidden}
+/* Cabecalho que encolhe o cartao inteiro, para nao ocupar a mesma altura toda vez que roda de novo. */
+.pf-finds-h{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+  border:0;background:transparent;cursor:pointer;padding:11px 13px;font-family:var(--font-sans);
+  border-bottom:1px solid var(--line-2);text-align:left}
+.pf-finds-h-t{font-size:var(--f-sm);font-weight:700;color:var(--ink-70)}
+.pf-finds-h-chev{color:var(--ink-45);transition:transform var(--t-fast) var(--ease);flex:0 0 auto}
+.pf-finds.collapsed .pf-finds-h{border-bottom:0}
+.pf-finds.collapsed .pf-finds-h-chev{transform:rotate(-90deg)}
+.pf-finds.collapsed .pf-find{display:none}
 .pf-find{display:flex;gap:10px;padding:12px 13px;border-bottom:1px solid var(--line-2);
   transition:background .15s var(--ease)}
 .pf-find:last-child{border-bottom:none}
@@ -1809,11 +1818,38 @@ function renderFindings(finds){
   paintFinds('fo-finds', finds.filter(function(f){ return f.tema === 'fontes'; }));
 }
 
+// Encolher o cartão inteiro (não cada achado — cada um já tem seu próprio "ver detalhes"): numa
+// tela de celular, ver "3 achados" o tempo todo ocupando a mesma altura toda vez que já foi lido
+// uma vez é rolagem desperdiçada. Lembrado por id porque cores e fontes são cartões separados, e
+// fechar um não deveria fechar o outro.
+var pfFindsCollapsed = {};
+
+function pfFindsToggle(id){
+  pfFindsCollapsed[id] = !pfFindsCollapsed[id];
+  var host = document.getElementById(id);
+  if (host) host.classList.toggle('collapsed', pfFindsCollapsed[id]);
+}
+
 function paintFinds(id, finds){
   var host = document.getElementById(id);
   if (!host) return;
   host.style.display = finds.length ? '' : 'none';
-  host.innerHTML = finds.map(function(f, i){
+  if (!finds.length) { host.innerHTML = ''; return; }
+
+  var problems = finds.filter(function(f){ return f.sev === 'err' || f.sev === 'warn'; });
+  var collapsed = !!pfFindsCollapsed[id];
+  host.classList.toggle('collapsed', collapsed);
+
+  var summaryText = problems.length
+    ? T('opt.pf.finds.summary.problems', fmt(problems.length))
+    : T('opt.pf.finds.summary.ok', fmt(finds.length));
+
+  var header = '<button class="pf-finds-h" onclick="pfFindsToggle(\'' + id + '\')" aria-expanded="' + (!collapsed) + '">'
+    + '<span class="pf-finds-h-t">' + esc(summaryText) + '</span>'
+    + '<span class="pf-finds-h-chev" aria-hidden="true">▾</span>'
+    + '</button>';
+
+  var items = finds.map(function(f, i){
     return '<div class="pf-find ' + f.sev + '"><span class="f-ic" aria-hidden="true">' + (SEV_GLYPH[f.sev] || '') + '</span><span class="f-b">'
          + '<div class="f-t">' + esc(f.t) + '</div>'
          // O título classifica e fica à vista; a explicação fica atrás do disclosure.
@@ -1825,6 +1861,8 @@ function paintFinds(id, finds){
              + esc(f.go) + '</button>' : '')
          + '</span></div>';
   }).join('');
+
+  host.innerHTML = header + items;
 }
 
 function showColorTable(d){
