@@ -17,7 +17,7 @@ namespace Optimus.Maintenance
     /// </summary>
     internal static class Program
     {
-        internal const string VersionTag = "1.69.0";
+        internal const string VersionTag = "1.70.0";
 
         private static Mutex? _single;
 
