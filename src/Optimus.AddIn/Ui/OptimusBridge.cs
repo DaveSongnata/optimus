@@ -737,7 +737,11 @@ namespace Optimus.AddIn.Ui
 
             _palettes.AddColor(palette, new Optimus.Core.Palettes.PaletteColor
             {
-                Name = name,
+                // A blank name here used to make InPalette itself read as false (it was derived from
+                // this field's length) — fixed at the source now (PaletteMatcher.BuildTable sets
+                // InPalette directly), but falling back to the hex still means a colour never shows an
+                // empty tag, same as PaletteColorAdd/PaletteCapture already do.
+                Name = name.Length > 0 ? name : "#" + hex,
                 Model = Optimus.Core.Audit.ColorModel.Rgb,
                 Hex = hex,
             }, out PaletteChange status);

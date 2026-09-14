@@ -43,6 +43,28 @@ namespace Optimus.Core.Tests.Palettes
         }
 
         [Fact]
+        public void A_registered_colour_with_a_blank_name_still_counts_as_InPalette()
+        {
+            // Reported on a real file (2026-09): two colours added to "Hewlla" by typed hex with the
+            // name field left empty. InPalette used to be `RegisteredAs.Length > 0` — a blank name made
+            // a colour that WAS found read as "not registered", while NotInAnyPalette (which never looks
+            // at the name) correctly excluded it from the alert list. Same data, two different verdicts,
+            // because one of the two questions being asked was the wrong one. InPalette must be TRUE
+            // here even though RegisteredAs is "".
+            ColorAudit audit = AuditWith((ColorModel.Rgb, "F58634", 1));
+            PaletteRegistry registry = PaletteRegistry.InMemory();
+            registry.AddPalette("Hewlla");
+            registry.AddColor("Hewlla", new PaletteColor { Name = "", Model = ColorModel.Rgb, Hex = "F58634" });
+
+            List<ColorTableRow> rows = PaletteMatcher.BuildTable(audit, registry);
+
+            Assert.True(rows[0].InPalette);
+            Assert.Equal("", rows[0].RegisteredAs);
+            Assert.Equal("Hewlla", rows[0].RegisteredPalette);
+            Assert.Empty(PaletteMatcher.NotInAnyPalette(audit, registry)); // the two must agree
+        }
+
+        [Fact]
         public void NotInAnyPalette_flags_colors_absent_from_every_registered_palette()
         {
             ColorAudit audit = AuditWith((ColorModel.Rgb, "FF0000", 1), (ColorModel.Rgb, "0000FF", 1));

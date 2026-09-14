@@ -2062,7 +2062,10 @@ function pfShowDetail(key, r){
     + (r.components ? '  ·  ' + r.components : '');
   var tag = document.getElementById('pf-det-tag');
   tag.className = 'pf-det-tag ' + (r.inPalette ? 'in' : 'out');
-  tag.textContent = r.inPalette ? r.registeredAs : T('opt.pal.notregistered');
+  // registeredAs pode vir vazio numa cor cadastrada SEM nome (digitada só pelo hex) — isso já foi
+  // confundido com "não cadastrada" uma vez (era a própria definição de inPalette, não só o rótulo).
+  // inPalette manda; um nome em branco só troca o TEXTO do selo, nunca o veredito.
+  tag.textContent = r.inPalette ? (r.registeredAs || hexOf(r) || r.model) : T('opt.pal.notregistered');
 
   // "Por que essa cor tá fora se eu já cadastrei uma igualzinha?" — quando o hex bate com o de uma
   // cor JÁ cadastrada mas o modelo é diferente (CMYK vs RGB, por exemplo), a aparência na tela é a

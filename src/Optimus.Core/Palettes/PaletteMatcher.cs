@@ -13,10 +13,26 @@ namespace Optimus.Core.Palettes
         public int TimesUsed { get; set; }
         public double UsagePercent { get; set; }
 
-        /// <summary>Name from the registered palette, or empty when this colour isn't registered anywhere.</summary>
+        /// <summary>Name from the registered palette, or empty when this colour isn't registered anywhere
+        /// — OR when it is, but the operator never typed a name for it. Not the same thing: a blank name
+        /// used to read as "not registered" (<c>InPalette</c> derived from this field's length), which is
+        /// exactly backwards for a colour added by hex with the name left empty. Never use this field to
+        /// decide registration — read <see cref="InPalette"/> instead, which is set explicitly.</summary>
         public string RegisteredAs { get; set; } = "";
         public string RegisteredPalette { get; set; } = "";
-        public bool InPalette => RegisteredAs.Length > 0;
+
+        /// <summary>
+        /// Whether a registered palette colour was actually FOUND for this one. Set directly by
+        /// <see cref="PaletteMatcher.BuildTable"/> — never derived from <see cref="RegisteredAs"/>.
+        /// Measured on a real file (2026-09): two colours added to "Hewlla" via typed hex with the name
+        /// field left blank had <c>RegisteredAs == ""</c> despite a real match (their
+        /// <c>RegisteredPalette</c> correctly said "Hewlla"), so the old <c>RegisteredAs.Length > 0</c>
+        /// definition called them FORA DA PALETA while <c>PaletteMatcher.NotInAnyPalette</c> — which never
+        /// looks at the name — correctly did not. Two functions checking the exact same
+        /// "is it registered" question disagreeing because one of them asked a DIFFERENT question
+        /// ("does it have a name") is the bug.
+        /// </summary>
+        public bool InPalette { get; set; }
 
         /// <summary>
         /// Name of a DIFFERENT registered colour this one is visually indistinguishable from — set
@@ -77,6 +93,7 @@ namespace Optimus.Core.Palettes
 
                 if (registered.TryGetValue(color.Key, out PaletteColor? match))
                 {
+                    row.InPalette = true;
                     row.RegisteredAs = match!.Name;
                     row.RegisteredPalette = OwningPaletteName(registry!, match);
                 }
